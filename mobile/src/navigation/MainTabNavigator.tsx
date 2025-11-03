@@ -15,8 +15,8 @@ export default function MainTabNavigator() {
         tabBarActiveTintColor: '#FF6B35',
         tabBarInactiveTintColor: '#666',
         tabBarStyle: {
-          height: 60,
-          paddingBottom: 8,
+          height: 85,
+          paddingBottom: 25,
           paddingTop: 8,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
