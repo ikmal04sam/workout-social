@@ -53,7 +53,7 @@ export default function MainTabNavigator() {
           tabBarLabel: '',
           tabBarIcon: () => (
             <View style={styles.recordFab} accessibilityLabel="Create workout">
-              <Text style={styles.recordIcon}>●</Text>
+              <Text style={styles.recordIcon}>+</Text>
             </View>
           ),
         }}
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 18,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#007AFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
@@ -99,7 +99,11 @@ const styles = StyleSheet.create({
   },
   recordIcon: {
     color: 'white',
-    fontSize: 20,
+    fontSize: 45,
     fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 45,
+    includeFontPadding: false,
+    transform: [{ translateX: 1 }, { translateY: -1 }],
   },
 });
