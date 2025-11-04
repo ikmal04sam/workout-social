@@ -15,7 +15,7 @@ router.get('/', optionalAuth, async (req, res) => {
     
     // Add filtering conditions
     if (muscle_group) {
-      conditions.push(`muscle_group = $${queryParams.length + 1}`);
+      conditions.push(`LOWER(muscle_group) = LOWER($${queryParams.length + 1})`);
       queryParams.push(muscle_group);
     }
     
@@ -123,7 +123,7 @@ router.get('/muscle-group/:muscleGroup', optionalAuth, async (req, res) => {
     const { muscleGroup } = req.params;
     
     const result = await pool.query(
-      'SELECT id, name, description, muscle_group, equipment_type, created_at FROM exercises WHERE muscle_group = $1 ORDER BY name',
+      'SELECT id, name, description, muscle_group, equipment_type, created_at FROM exercises WHERE LOWER(muscle_group) = LOWER($1) ORDER BY name',
       [muscleGroup]
     );
     

@@ -209,7 +209,20 @@ class ApiService {
 
   // Exercise methods
   async getExercisesByMuscleGroup(muscleGroup: string): Promise<{ exercises: Exercise[] }> {
-    return await this.request<{ exercises: Exercise[] }>(`/exercises?muscle_group=${muscleGroup}`);
+    // Capitalize first letter to match database format (e.g., 'chest' -> 'Chest')
+    // Handle special cases like 'full_body' -> 'Full Body'
+    let formattedMuscleGroup = muscleGroup;
+    if (muscleGroup.includes('_')) {
+      // Convert snake_case to Title Case (e.g., 'full_body' -> 'Full Body')
+      formattedMuscleGroup = muscleGroup
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    } else {
+      // Capitalize first letter only (e.g., 'chest' -> 'Chest')
+      formattedMuscleGroup = muscleGroup.charAt(0).toUpperCase() + muscleGroup.slice(1).toLowerCase();
+    }
+    return await this.request<{ exercises: Exercise[] }>(`/exercises?muscle_group=${encodeURIComponent(formattedMuscleGroup)}`);
   }
 
   async getAllExercises(): Promise<{ exercises: Exercise[] }> {
