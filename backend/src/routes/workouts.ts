@@ -64,6 +64,36 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Get workouts by user ID (for viewing other users' profiles)
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 20, offset = 0 } = req.query;
+
+    // Get public workouts with exercise count
+    const result = await pool.query(`
+      SELECT 
+        w.*,
+        COUNT(we.id) as exercise_count
+      FROM workouts w
+      LEFT JOIN workout_exercises we ON w.id = we.workout_id
+      WHERE w.user_id = $1 AND w.is_public = true
+      GROUP BY w.id
+      ORDER BY w.date DESC, w.created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [userId, parseInt(limit as string), parseInt(offset as string)]);
+
+    res.json({
+      workouts: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('Get user workouts error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get specific workout with exercises and sets
 router.get('/:id', authenticateToken, async (req, res) => {
   try {

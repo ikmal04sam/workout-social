@@ -157,15 +157,31 @@ export default function HomeScreen() {
             >
               {/* User Info */}
               <View style={styles.userInfo}>
-                <View style={styles.userAvatar}>
+                <TouchableOpacity
+                  style={styles.userAvatar}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    navigation.navigate('UserProfile' as never, {
+                      userId: workout.user_id,
+                    } as never);
+                  }}
+                >
                   <Text style={styles.userAvatarText}>
                     {workout.username.charAt(0).toUpperCase()}
                   </Text>
-                </View>
-                <View style={styles.userDetails}>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.userDetails}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    navigation.navigate('UserProfile' as never, {
+                      userId: workout.user_id,
+                    } as never);
+                  }}
+                >
                   <Text style={styles.username}>{workout.username}</Text>
                   <Text style={styles.workoutTime}>{formatDate(workout.created_at)}</Text>
-                </View>
+                </TouchableOpacity>
               </View>
 
               {/* Workout Title */}

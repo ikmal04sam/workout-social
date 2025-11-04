@@ -37,12 +37,12 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen 
-        name="Maps" 
+        name="Discover" 
         component={DiscoverScreen}
         options={{
-          tabBarLabel: 'Maps',
+          tabBarLabel: 'Discover',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>📍</Text>
+            <Text style={{ color, fontSize: size }}>🔍</Text>
           ),
         }}
       />

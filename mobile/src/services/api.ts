@@ -311,6 +311,35 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // User search and follow methods
+  async searchUsers(query: string): Promise<{ users: any[] }> {
+    return await this.request<{ users: any[] }>(`/auth/search?q=${encodeURIComponent(query)}`);
+  }
+
+  async getUserProfile(userId: number): Promise<{ user: any }> {
+    return await this.request<{ user: any }>(`/auth/user/${userId}`);
+  }
+
+  async getUserWorkoutsByUserId(userId: number): Promise<{ workouts: Workout[] }> {
+    return await this.request<{ workouts: Workout[] }>(`/workouts/user/${userId}`);
+  }
+
+  async followUser(userId: number): Promise<{ message: string }> {
+    return await this.request<{ message: string }>(`/social/follow/${userId}`, {
+      method: 'POST',
+    });
+  }
+
+  async unfollowUser(userId: number): Promise<{ message: string }> {
+    return await this.request<{ message: string }>(`/social/follow/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getFollowStatus(userId: number): Promise<{ is_following: boolean }> {
+    return await this.request<{ is_following: boolean }>(`/social/follow-status/${userId}`);
+  }
 }
 
 // Create and export API service instance

@@ -6,236 +6,168 @@ import {
   ScrollView, 
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
+  TextInput,
   Alert,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { apiService } from '../../services/api';
 
-interface DiscoverWorkout {
+interface SearchUser {
   id: number;
-  title: string;
-  date: string;
-  duration?: number;
-  notes?: string;
-  is_public: boolean;
-  created_at: string;
-  user_id: number;
   username: string;
   bio?: string;
-  like_count: string;
-  comment_count: string;
-  is_liked?: boolean;
+  created_at: string;
+  follower_count: string;
+  following_count: string;
+  is_following: boolean;
 }
 
 export default function DiscoverScreen() {
   const navigation = useNavigation();
-  const [workouts, setWorkouts] = useState<DiscoverWorkout[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [likingWorkoutId, setLikingWorkoutId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [users, setUsers] = useState<SearchUser[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
-  const loadWorkouts = useCallback(async () => {
+  const searchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setUsers([]);
+      return;
+    }
+
     try {
-      const response = await apiService.getDiscoverWorkouts();
-      // Convert counts from strings to numbers and ensure is_liked is boolean
-      const formattedWorkouts = response.workouts.map((w: any) => ({
-        ...w,
-        like_count: parseInt(w.like_count) || 0,
-        comment_count: parseInt(w.comment_count) || 0,
-        is_liked: w.is_liked === true || w.is_liked === 'true',
+      setIsLoading(true);
+      const response = await apiService.searchUsers(query);
+      const formattedUsers = response.users.map((u: any) => ({
+        ...u,
+        follower_count: parseInt(u.follower_count) || 0,
+        following_count: parseInt(u.following_count) || 0,
+        is_following: u.is_following === true || u.is_following === 'true',
       }));
-      setWorkouts(formattedWorkouts);
+      setUsers(formattedUsers);
     } catch (error) {
-      console.error('Error loading workouts:', error);
-      Alert.alert('Error', 'Failed to load workouts');
+      console.error('Error searching users:', error);
+      Alert.alert('Error', 'Failed to search users');
     } finally {
       setIsLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
-  // Load workouts when screen comes into focus
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+
+    // Clear previous timer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    // Set new timer for debounced search
+    const timer = setTimeout(() => {
+      searchUsers(text);
+    }, 500);
+
+    setDebounceTimer(timer);
+  };
+
+  // Clear search when screen loses focus
   useFocusEffect(
     useCallback(() => {
-      loadWorkouts();
-    }, [loadWorkouts])
+      return () => {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+      };
+    }, [debounceTimer])
   );
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadWorkouts();
-  };
-
-  const handleLike = async (workoutId: number, isLiked: boolean) => {
-    if (likingWorkoutId) return; // Prevent multiple rapid clicks
-    
-    setLikingWorkoutId(workoutId);
-    try {
-      if (isLiked) {
-        await apiService.unlikeWorkout(workoutId);
-        // Update local state optimistically
-        setWorkouts(prev => prev.map(w => 
-          w.id === workoutId 
-            ? { ...w, is_liked: false, like_count: Math.max(0, w.like_count - 1) }
-            : w
-        ));
-      } else {
-        await apiService.likeWorkout(workoutId);
-        // Update local state optimistically
-        setWorkouts(prev => prev.map(w => 
-          w.id === workoutId 
-            ? { ...w, is_liked: true, like_count: w.like_count + 1 }
-            : w
-        ));
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-      // Reload to get accurate state
-      loadWorkouts();
-    } finally {
-      setLikingWorkoutId(null);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-      });
-    }
-  };
-
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>
-        <Text style={styles.subtitle}>Find new workouts and people</Text>
+        <Text style={styles.subtitle}>Search for users to follow</Text>
       </View>
-      
+
+      {/* Search Input */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search users by username..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+
+      {/* Results */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading workouts...</Text>
+          <Text style={styles.loadingText}>Searching...</Text>
         </View>
-      ) : workouts.length === 0 ? (
+      ) : searchQuery.trim() === '' ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No workouts yet</Text>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyText}>Search for users</Text>
           <Text style={styles.emptySubtext}>
-            Be the first to share a workout!
+            Enter a username to find and follow other users
+          </Text>
+        </View>
+      ) : users.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No users found</Text>
+          <Text style={styles.emptySubtext}>
+            Try a different search term
           </Text>
         </View>
       ) : (
-        <View style={styles.content}>
-          {workouts.map((workout) => (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {users.map((user) => (
             <TouchableOpacity
-              key={workout.id}
-              style={styles.workoutCard}
-              onPress={() => navigation.navigate('WorkoutDetail' as never, { workoutId: workout.id } as never)}
+              key={user.id}
+              style={styles.userCard}
+              onPress={() =>
+                navigation.navigate('UserProfile' as never, {
+                  userId: user.id,
+                } as never)
+              }
               activeOpacity={0.7}
             >
-              {/* User Info */}
               <View style={styles.userInfo}>
                 <View style={styles.userAvatar}>
                   <Text style={styles.userAvatarText}>
-                    {workout.username.charAt(0).toUpperCase()}
+                    {user.username.charAt(0).toUpperCase()}
                   </Text>
                 </View>
                 <View style={styles.userDetails}>
-                  <Text style={styles.username}>{workout.username}</Text>
-                  <Text style={styles.workoutTime}>{formatDate(workout.created_at)}</Text>
+                  <Text style={styles.username}>{user.username}</Text>
+                  {user.bio && (
+                    <Text style={styles.userBio} numberOfLines={1}>
+                      {user.bio}
+                    </Text>
+                  )}
+                  <View style={styles.userStats}>
+                    <Text style={styles.userStatText}>
+                      {user.follower_count} followers
+                    </Text>
+                    <Text style={styles.userStatText}> • </Text>
+                    <Text style={styles.userStatText}>
+                      {user.following_count} following
+                    </Text>
+                  </View>
                 </View>
-              </View>
-
-              {/* Workout Title */}
-              <Text style={styles.workoutTitle}>{workout.title}</Text>
-
-              {/* Workout Details */}
-              <View style={styles.workoutMeta}>
-                <Text style={styles.workoutDate}>
-                  {new Date(workout.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </Text>
-                {workout.duration && (
-                  <Text style={styles.workoutMetaText}>
-                    • {workout.duration} min
-                  </Text>
+                {user.is_following && (
+                  <View style={styles.followingBadge}>
+                    <Text style={styles.followingBadgeText}>Following</Text>
+                  </View>
                 )}
-              </View>
-
-              {/* Workout Notes Preview */}
-              {workout.notes && (
-                <Text style={styles.workoutNotes} numberOfLines={2}>
-                  {workout.notes}
-                </Text>
-              )}
-
-              {/* Social Actions */}
-              <View style={styles.socialActions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleLike(workout.id, workout.is_liked || false);
-                  }}
-                  disabled={likingWorkoutId === workout.id}
-                >
-                  <Text style={[
-                    styles.actionIcon,
-                    workout.is_liked && styles.likedIcon
-                  ]}>
-                    {workout.is_liked ? '❤️' : '🤍'}
-                  </Text>
-                  <Text style={[
-                    styles.actionText,
-                    workout.is_liked && styles.likedText
-                  ]}>
-                    {workout.like_count}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    navigation.navigate('Comments' as never, { 
-                      workoutId: workout.id,
-                      workoutTitle: workout.title 
-                    } as never);
-                  }}
-                >
-                  <Text style={styles.actionIcon}>💬</Text>
-                  <Text style={styles.actionText}>{workout.comment_count}</Text>
-                </TouchableOpacity>
-
-                <View style={styles.actionSpacer} />
               </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -260,6 +192,21 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
   },
+  searchContainer: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -277,10 +224,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
   emptyText: {
     fontSize: 18,
     color: '#999',
-    marginBottom: 10,
+    marginBottom: 8,
     fontWeight: '600',
   },
   emptySubtext: {
@@ -289,9 +240,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   content: {
+    flex: 1,
     padding: 16,
   },
-  workoutCard: {
+  userCard: {
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
@@ -305,12 +257,11 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
   userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -318,76 +269,40 @@ const styles = StyleSheet.create({
   },
   userAvatarText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   userDetails: {
     flex: 1,
   },
   username: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  workoutTime: {
+  userBio: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 6,
+  },
+  userStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userStatText: {
     fontSize: 12,
     color: '#999',
   },
-  workoutTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+  followingBadge: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  workoutMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  workoutDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  workoutMetaText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
-  },
-  workoutNotes: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  socialActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 20,
-  },
-  actionIcon: {
-    fontSize: 20,
-    marginRight: 6,
-  },
-  likedIcon: {
-    // Heart emoji already red when liked
-  },
-  actionText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  likedText: {
-    color: '#FF3B30',
-  },
-  actionSpacer: {
-    flex: 1,
+  followingBadgeText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '600',
   },
 });

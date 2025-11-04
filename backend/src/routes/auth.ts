@@ -152,4 +152,88 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Search users by username
+router.get('/search', authenticateToken, async (req, res) => {
+  try {
+    const { q, limit = 20, offset = 0 } = req.query;
+    const currentUserId = (req as any).userId;
+
+    if (!q || (q as string).trim().length === 0) {
+      return res.json({
+        users: [],
+        count: 0
+      });
+    }
+
+    const searchQuery = `%${(q as string).trim()}%`;
+    
+    // Get users matching search query, excluding current user
+    const result = await pool.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.bio,
+        u.created_at,
+        COUNT(DISTINCT f1.follower_id) as follower_count,
+        COUNT(DISTINCT f2.following_id) as following_count,
+        CASE WHEN f3.follower_id IS NOT NULL THEN true ELSE false END as is_following
+      FROM users u
+      LEFT JOIN follows f1 ON f1.following_id = u.id
+      LEFT JOIN follows f2 ON f2.follower_id = u.id
+      LEFT JOIN follows f3 ON f3.follower_id = $1 AND f3.following_id = u.id
+      WHERE u.username ILIKE $2 AND u.id != $1
+      GROUP BY u.id, u.username, u.bio, u.created_at, f3.follower_id
+      ORDER BY u.username
+      LIMIT $3 OFFSET $4
+    `, [currentUserId, searchQuery, parseInt(limit as string), parseInt(offset as string)]);
+
+    res.json({
+      users: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('User search error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user profile by ID
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = (req as any).userId;
+
+    // Get user info with follower/following counts
+    const userResult = await pool.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.bio,
+        u.created_at,
+        COUNT(DISTINCT f1.follower_id) as follower_count,
+        COUNT(DISTINCT f2.following_id) as following_count,
+        CASE WHEN f3.follower_id IS NOT NULL THEN true ELSE false END as is_following
+      FROM users u
+      LEFT JOIN follows f1 ON f1.following_id = u.id
+      LEFT JOIN follows f2 ON f2.follower_id = u.id
+      LEFT JOIN follows f3 ON f3.follower_id = $1 AND f3.following_id = u.id
+      WHERE u.id = $2
+      GROUP BY u.id, u.username, u.bio, u.created_at, f3.follower_id
+    `, [currentUserId, userId]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      user: userResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
