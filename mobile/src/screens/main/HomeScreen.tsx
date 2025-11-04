@@ -222,7 +222,10 @@ export default function HomeScreen() {
                   style={styles.actionButton}
                   onPress={(e) => {
                     e.stopPropagation();
-                    // TODO: Navigate to comments
+                    navigation.navigate('Comments' as never, { 
+                      workoutId: workout.id,
+                      workoutTitle: workout.title 
+                    } as never);
                   }}
                 >
                   <Text style={styles.actionIcon}>💬</Text>

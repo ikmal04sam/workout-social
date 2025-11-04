@@ -9,6 +9,7 @@ import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
 import MainTabNavigator from './src/navigation/MainTabNavigator';
 import WorkoutDetailScreen from './src/screens/workout/WorkoutDetailScreen';
+import CommentsScreen from './src/screens/workout/CommentsScreen';
 
 // Import AuthContext
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -37,6 +38,11 @@ function AppNavigator() {
           <Stack.Screen 
             name="WorkoutDetail" 
             component={WorkoutDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Comments" 
+            component={CommentsScreen}
             options={{ headerShown: false }}
           />
         </>

@@ -305,6 +305,12 @@ class ApiService {
   async getComments(workoutId: number): Promise<{ comments: any[] }> {
     return await this.request<{ comments: any[] }>(`/social/comments/${workoutId}`);
   }
+
+  async deleteComment(commentId: number): Promise<{ message: string }> {
+    return await this.request<{ message: string }>(`/social/comment/${commentId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Create and export API service instance
