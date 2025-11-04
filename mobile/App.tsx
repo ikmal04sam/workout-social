@@ -8,6 +8,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
 import MainTabNavigator from './src/navigation/MainTabNavigator';
+import WorkoutDetailScreen from './src/screens/workout/WorkoutDetailScreen';
 
 // Import AuthContext
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -31,7 +32,14 @@ function AppNavigator() {
       screenOptions={{ headerShown: false }}
     >
       {isAuthenticated ? (
-        <Stack.Screen name="Main" component={MainTabNavigator} />
+        <>
+          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen 
+            name="WorkoutDetail" 
+            component={WorkoutDetailScreen}
+            options={{ headerShown: false }}
+          />
+        </>
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
