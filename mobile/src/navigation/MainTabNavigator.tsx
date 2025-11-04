@@ -104,6 +104,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 45,
     includeFontPadding: false,
-    transform: [{ translateX: 1 }, { translateY: -1 }],
   },
 });
