@@ -38,11 +38,12 @@ export default function DiscoverScreen() {
   const loadWorkouts = useCallback(async () => {
     try {
       const response = await apiService.getDiscoverWorkouts();
-      // Convert counts from strings to numbers
+      // Convert counts from strings to numbers and ensure is_liked is boolean
       const formattedWorkouts = response.workouts.map((w: any) => ({
         ...w,
         like_count: parseInt(w.like_count) || 0,
         comment_count: parseInt(w.comment_count) || 0,
+        is_liked: w.is_liked === true || w.is_liked === 'true',
       }));
       setWorkouts(formattedWorkouts);
     } catch (error) {

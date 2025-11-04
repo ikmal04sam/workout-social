@@ -452,6 +452,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
 // Get public workouts (discover page)
 router.get('/discover', authenticateToken, async (req, res) => {
   try {
+    const userId = (req as any).userId;
     const { limit = 20, offset = 0 } = req.query;
 
     const result = await pool.query(`
@@ -467,16 +468,18 @@ router.get('/discover', authenticateToken, async (req, res) => {
         u.username,
         u.bio,
         COUNT(DISTINCT l.id) as like_count,
-        COUNT(DISTINCT c.id) as comment_count
+        COUNT(DISTINCT c.id) as comment_count,
+        CASE WHEN my_likes.id IS NOT NULL THEN true ELSE false END as is_liked
       FROM workouts w
       JOIN users u ON w.user_id = u.id
       LEFT JOIN likes l ON l.workout_id = w.id
       LEFT JOIN comments c ON c.workout_id = w.id
+      LEFT JOIN likes my_likes ON my_likes.workout_id = w.id AND my_likes.user_id = $1
       WHERE w.is_public = true
-      GROUP BY w.id, u.id, u.username, u.bio
+      GROUP BY w.id, u.id, u.username, u.bio, my_likes.id
       ORDER BY w.created_at DESC
-      LIMIT $1 OFFSET $2
-    `, [parseInt(limit as string), parseInt(offset as string)]);
+      LIMIT $2 OFFSET $3
+    `, [userId, parseInt(limit as string), parseInt(offset as string)]);
 
     res.json({
       workouts: result.rows,
