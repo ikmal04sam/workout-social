@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet } from 'react-native';
 import HomeScreen from '../screens/main/HomeScreen';
 import DiscoverScreen from '../screens/main/DiscoverScreen';
+import ExploreScreen from '../screens/main/ExploreScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import CreateWorkoutScreen from '../screens/workout/CreateWorkoutScreen';
 
@@ -59,12 +60,12 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen 
-        name="Groups" 
-        component={DiscoverScreen}
+        name="Explore" 
+        component={ExploreScreen}
         options={{
-          tabBarLabel: 'Groups',
+          tabBarLabel: 'Explore',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>👥</Text>
+            <Text style={{ color, fontSize: size }}>🌟</Text>
           ),
         }}
       />
