@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, apiService } from '../services/api';
+import { User, apiService, UpdateProfileRequest } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, bio?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (profileData: UpdateProfileRequest) => Promise<void>;
   error: string | null;
   clearError: () => void;
 }
@@ -92,6 +93,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const updateProfile = async (profileData: UpdateProfileRequest) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await apiService.updateProfile(profileData);
+      setUser(response.user);
+    } catch (error: any) {
+      setError(error.message || 'Failed to update profile');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const clearError = () => {
     setError(null);
   };
@@ -103,6 +119,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     register,
     logout,
+    updateProfile,
     error,
     clearError,
   };

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -179,11 +180,22 @@ export default function UserProfileScreen() {
         {/* User Info Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user.username.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            {user.profile_pic ? (
+              <Image
+                source={{
+                  uri: user.profile_pic.startsWith('data:') 
+                    ? user.profile_pic 
+                    : `data:image/jpeg;base64,${user.profile_pic}`
+                }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {user.username.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
           </View>
 
           <Text style={styles.username}>{user.username}</Text>

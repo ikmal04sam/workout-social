@@ -423,6 +423,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
         u.id as user_id,
         u.username,
         u.bio,
+        u.profile_pic,
         COUNT(DISTINCT l.id) as like_count,
         COUNT(DISTINCT c.id) as comment_count,
         CASE WHEN my_likes.id IS NOT NULL THEN true ELSE false END as is_liked
@@ -433,7 +434,7 @@ router.get('/feed', authenticateToken, async (req, res) => {
       LEFT JOIN comments c ON c.workout_id = w.id
       LEFT JOIN likes my_likes ON my_likes.workout_id = w.id AND my_likes.user_id = $1
       WHERE f.follower_id = $1 AND w.is_public = true
-      GROUP BY w.id, u.id, u.username, u.bio, my_likes.id
+      GROUP BY w.id, u.id, u.username, u.bio, u.profile_pic, my_likes.id
       ORDER BY w.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, parseInt(limit as string), parseInt(offset as string)]);
@@ -467,6 +468,7 @@ router.get('/discover', authenticateToken, async (req, res) => {
         u.id as user_id,
         u.username,
         u.bio,
+        u.profile_pic,
         COUNT(DISTINCT l.id) as like_count,
         COUNT(DISTINCT c.id) as comment_count,
         CASE WHEN my_likes.id IS NOT NULL THEN true ELSE false END as is_liked
@@ -476,7 +478,7 @@ router.get('/discover', authenticateToken, async (req, res) => {
       LEFT JOIN comments c ON c.workout_id = w.id
       LEFT JOIN likes my_likes ON my_likes.workout_id = w.id AND my_likes.user_id = $1
       WHERE w.is_public = true
-      GROUP BY w.id, u.id, u.username, u.bio, my_likes.id
+      GROUP BY w.id, u.id, u.username, u.bio, u.profile_pic, my_likes.id
       ORDER BY w.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, parseInt(limit as string), parseInt(offset as string)]);

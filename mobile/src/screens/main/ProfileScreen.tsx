@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { apiService, Workout } from '../../services/api';
@@ -75,12 +75,40 @@ export default function ProfileScreen() {
       
       <View style={styles.content}>
         <View style={styles.profileCard}>
+          {/* Profile Picture */}
+          <View style={styles.profilePicContainer}>
+            {user?.profile_pic ? (
+              <Image
+                source={{
+                  uri: user.profile_pic.startsWith('data:') 
+                    ? user.profile_pic 
+                    : `data:image/jpeg;base64,${user.profile_pic}`
+                }}
+                style={styles.profilePic}
+              />
+            ) : (
+              <View style={styles.profilePicPlaceholder}>
+                <Text style={styles.profilePicPlaceholderText}>
+                  {user?.username?.charAt(0).toUpperCase() || '?'}
+                </Text>
+              </View>
+            )}
+          </View>
+
           <Text style={styles.username}>{user?.username || 'Loading...'}</Text>
           <Text style={styles.email}>{user?.email || ''}</Text>
           <Text style={styles.bio}>{user?.bio || 'No bio yet'}</Text>
           <Text style={styles.memberSince}>
             Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
           </Text>
+
+          {/* Edit Button */}
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('EditProfile' as never)}
+          >
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Workouts Section */}
@@ -169,6 +197,28 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: 'center',
   },
+  profilePicContainer: {
+    marginBottom: 16,
+  },
+  profilePic: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#e0e0e0',
+  },
+  profilePicPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profilePicPlaceholderText: {
+    color: 'white',
+    fontSize: 40,
+    fontWeight: 'bold',
+  },
   username: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -191,6 +241,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     fontStyle: 'italic',
+    marginBottom: 16,
+  },
+  editButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginTop: 8,
+  },
+  editButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   workoutsSection: {
     marginBottom: 20,

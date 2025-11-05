@@ -9,7 +9,13 @@ export interface User {
   username: string;
   email: string;
   bio: string;
+  profile_pic?: string | null;
   created_at: string;
+}
+
+export interface UpdateProfileRequest {
+  bio?: string;
+  profile_pic?: string | null;
 }
 
 export interface AuthResponse {
@@ -185,6 +191,13 @@ class ApiService {
 
   async getProfile(): Promise<{ user: User }> {
     return await this.request<{ user: User }>('/auth/profile');
+  }
+
+  async updateProfile(profileData: UpdateProfileRequest): Promise<{ message: string; user: User }> {
+    return await this.request<{ message: string; user: User }>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
   }
 
   async logout(): Promise<void> {

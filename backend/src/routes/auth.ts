@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
 
     // Create user
     const result = await pool.query(
-      'INSERT INTO users (username, email, password_hash, bio) VALUES ($1, $2, $3, $4) RETURNING id, username, email, bio, created_at',
+      'INSERT INTO users (username, email, password_hash, bio) VALUES ($1, $2, $3, $4) RETURNING id, username, email, bio, profile_pic, created_at',
       [username, email, hashedPassword, bio || '']
     );
 
@@ -56,6 +56,7 @@ router.post('/register', async (req, res) => {
         username: user.username,
         email: user.email,
         bio: user.bio,
+        profile_pic: user.profile_pic,
         created_at: user.created_at
       },
       token
@@ -81,7 +82,7 @@ router.post('/login', async (req, res) => {
 
     // Find user by username or email
     const result = await pool.query(
-      'SELECT id, username, email, password_hash, bio, created_at FROM users WHERE username = $1 OR email = $1',
+      'SELECT id, username, email, password_hash, bio, profile_pic, created_at FROM users WHERE username = $1 OR email = $1',
       [username]
     );
 
@@ -116,6 +117,7 @@ router.post('/login', async (req, res) => {
         username: user.username,
         email: user.email,
         bio: user.bio,
+        profile_pic: user.profile_pic,
         created_at: user.created_at
       },
       token
@@ -134,7 +136,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
     const userId = (req as any).userId;
 
     const result = await pool.query(
-      'SELECT id, username, email, bio, created_at FROM users WHERE id = $1',
+      'SELECT id, username, email, bio, profile_pic, created_at FROM users WHERE id = $1',
       [userId]
     );
 
@@ -148,6 +150,76 @@ router.get('/profile', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update user profile (protected route)
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { bio, profile_pic } = req.body;
+
+    // Build update query dynamically based on provided fields
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (bio !== undefined) {
+      updates.push(`bio = $${paramCount}`);
+      values.push(bio || '');
+      paramCount++;
+    }
+
+    if (profile_pic !== undefined) {
+      // Validate profile_pic size (limit to 5MB base64 string, which is ~3.75MB image)
+      if (profile_pic && profile_pic.length > 5 * 1024 * 1024) {
+        return res.status(400).json({ 
+          error: 'Profile picture is too large. Please use a smaller image.' 
+        });
+      }
+      
+      updates.push(`profile_pic = $${paramCount}`);
+      // Store null if empty string, otherwise store the base64 string
+      values.push(profile_pic && profile_pic.trim() !== '' ? profile_pic : null);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    // Add userId to values array for WHERE clause
+    values.push(userId);
+
+    const query = `
+      UPDATE users 
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING id, username, email, bio, profile_pic, created_at
+    `;
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: result.rows[0]
+    });
+
+  } catch (error: any) {
+    console.error('Update profile error:', error);
+    // Provide more specific error messages
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Duplicate entry' });
+    } else if (error.message && error.message.includes('value too long')) {
+      return res.status(400).json({ 
+        error: 'Profile picture is too large. Please use a smaller image.' 
+      });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -173,6 +245,7 @@ router.get('/search', authenticateToken, async (req, res) => {
         u.id,
         u.username,
         u.bio,
+        u.profile_pic,
         u.created_at,
         COUNT(DISTINCT f1.follower_id) as follower_count,
         COUNT(DISTINCT f2.following_id) as following_count,
@@ -182,7 +255,7 @@ router.get('/search', authenticateToken, async (req, res) => {
       LEFT JOIN follows f2 ON f2.follower_id = u.id
       LEFT JOIN follows f3 ON f3.follower_id = $1 AND f3.following_id = u.id
       WHERE u.username ILIKE $2 AND u.id != $1
-      GROUP BY u.id, u.username, u.bio, u.created_at, f3.follower_id
+      GROUP BY u.id, u.username, u.bio, u.profile_pic, u.created_at, f3.follower_id
       ORDER BY u.username
       LIMIT $3 OFFSET $4
     `, [currentUserId, searchQuery, parseInt(limit as string), parseInt(offset as string)]);
@@ -210,6 +283,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         u.id,
         u.username,
         u.bio,
+        u.profile_pic,
         u.created_at,
         COUNT(DISTINCT f1.follower_id) as follower_count,
         COUNT(DISTINCT f2.following_id) as following_count,
@@ -219,7 +293,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
       LEFT JOIN follows f2 ON f2.follower_id = u.id
       LEFT JOIN follows f3 ON f3.follower_id = $1 AND f3.following_id = u.id
       WHERE u.id = $2
-      GROUP BY u.id, u.username, u.bio, u.created_at, f3.follower_id
+      GROUP BY u.id, u.username, u.bio, u.profile_pic, u.created_at, f3.follower_id
     `, [currentUserId, userId]);
 
     if (userResult.rows.length === 0) {

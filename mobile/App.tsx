@@ -11,6 +11,7 @@ import MainTabNavigator from './src/navigation/MainTabNavigator';
 import WorkoutDetailScreen from './src/screens/workout/WorkoutDetailScreen';
 import CommentsScreen from './src/screens/workout/CommentsScreen';
 import UserProfileScreen from './src/screens/user/UserProfileScreen';
+import EditProfileScreen from './src/screens/user/EditProfileScreen';
 
 // Import AuthContext
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -49,6 +50,11 @@ function AppNavigator() {
           <Stack.Screen 
             name="UserProfile" 
             component={UserProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfileScreen}
             options={{ headerShown: false }}
           />
         </>
