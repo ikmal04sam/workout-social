@@ -1,6 +1,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from '../screens/main/HomeScreen';
 import DiscoverScreen from '../screens/main/DiscoverScreen';
 import ExploreScreen from '../screens/main/ExploreScreen';
@@ -8,6 +10,39 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 import CreateWorkoutScreen from '../screens/workout/CreateWorkoutScreen';
 
 const Tab = createBottomTabNavigator();
+
+// Profile button component for header
+function ProfileHeaderButton() {
+  const navigation = useNavigation();
+  const { user } = useAuth();
+
+  return (
+    <TouchableOpacity
+      style={headerStyles.profileButton}
+      onPress={() => {
+        navigation.navigate('You' as never);
+      }}
+      activeOpacity={0.7}
+    >
+      {user?.profile_pic ? (
+        <Image
+          source={{
+            uri: user.profile_pic.startsWith('data:') 
+              ? user.profile_pic 
+              : `data:image/jpeg;base64,${user.profile_pic}`
+          }}
+          style={headerStyles.profilePic}
+        />
+      ) : (
+        <View style={headerStyles.profilePicPlaceholder}>
+          <Text style={headerStyles.profilePicText}>
+            {user?.username?.charAt(0).toUpperCase() || '?'}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
 
 export default function MainTabNavigator() {
   return (
@@ -25,12 +60,30 @@ export default function MainTabNavigator() {
           shadowRadius: 6,
           elevation: 8,
         },
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: 'white',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+          elevation: 3,
+        },
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 18,
+        },
       }}
     >
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
         options={{
+          headerTitle: 'Your Feed',
+          headerRight: () => <ProfileHeaderButton />,
+          headerRightContainerStyle: {
+            paddingRight: 16,
+          },
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Text style={{ color, fontSize: size }}>🏠</Text>
@@ -105,5 +158,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 45,
     includeFontPadding: false,
+  },
+});
+
+const headerStyles = StyleSheet.create({
+  profileButton: {
+    marginRight: 4,
+    marginTop: -4,
+  },
+  profilePic: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e0e0e0',
+  },
+  profilePicPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profilePicText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
