@@ -11,8 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import MuscleGroupPicker from '../../components/MuscleGroupPicker';
-import ExercisePicker from '../../components/ExercisePicker';
+import ExerciseSearchModal from '../../components/ExerciseSearchModal';
 import SetInputForm from '../../components/SetInputForm';
 import ExerciseCard from '../../components/ExerciseCard';
 import { apiService } from '../../services/api';
@@ -44,7 +43,6 @@ export default function CreateWorkoutScreen() {
   const [workoutNotes, setWorkoutNotes] = useState('');
   
   // Exercise selection state
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [currentSets, setCurrentSets] = useState<Set[]>([]);
   
@@ -53,7 +51,7 @@ export default function CreateWorkoutScreen() {
   
   // UI state
   const [isLoading, setIsLoading] = useState(false);
-  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [isExerciseModalVisible, setIsExerciseModalVisible] = useState(false);
 
   // Initialize with one empty set
   useEffect(() => {
@@ -68,11 +66,12 @@ export default function CreateWorkoutScreen() {
   }, []);
 
   const handleAddSet = () => {
+    const lastSet = currentSets[currentSets.length - 1];
     const newSet: Set = {
       set_number: currentSets.length + 1,
-      reps: 0,
-      weight: 0,
-      rest_time: 0
+      reps: lastSet?.reps ?? 0,
+      weight: lastSet?.weight ?? 0,
+      rest_time: lastSet?.rest_time ?? 0
     };
     setCurrentSets([...currentSets, newSet]);
   };
@@ -115,7 +114,6 @@ export default function CreateWorkoutScreen() {
     setAddedExercises([...addedExercises, workoutExercise]);
     
     // Reset for next exercise
-    setSelectedMuscleGroup('');
     setSelectedExercise(null);
     setCurrentSets([{
       set_number: 1,
@@ -123,7 +121,7 @@ export default function CreateWorkoutScreen() {
       weight: 0,
       rest_time: 0
     }]);
-    setShowExercisePicker(false);
+    setIsExerciseModalVisible(false);
   };
 
   const handleRemoveExercise = (index: number) => {
@@ -262,21 +260,29 @@ export default function CreateWorkoutScreen() {
           </View>
         </View>
 
-        {/* Exercise Selection Flow */}
+        {/* Exercise Selection (Simplified) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Add Exercise</Text>
-          
-          <MuscleGroupPicker
-            selectedMuscleGroup={selectedMuscleGroup}
-            onSelectMuscleGroup={setSelectedMuscleGroup}
-          />
 
-          {selectedMuscleGroup && (
-            <ExercisePicker
-              muscleGroup={selectedMuscleGroup}
-              selectedExercise={selectedExercise}
-              onSelectExercise={setSelectedExercise}
-            />
+          {!selectedExercise ? (
+            <TouchableOpacity
+              style={[styles.addExerciseButton, { backgroundColor: '#007AFF' }]}
+              onPress={() => setIsExerciseModalVisible(true)}
+            >
+              <Text style={styles.addExerciseButtonText}>Select Exercise</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>{selectedExercise.name}</Text>
+                <TouchableOpacity onPress={() => setIsExerciseModalVisible(true)}>
+                  <Text style={{ color: '#007AFF', fontWeight: '600' }}>Change</Text>
+                </TouchableOpacity>
+              </View>
+              {selectedExercise.description ? (
+                <Text style={{ color: '#666', marginTop: 6 }}>{selectedExercise.description}</Text>
+              ) : null}
+            </View>
           )}
 
           {selectedExercise && (
@@ -296,6 +302,15 @@ export default function CreateWorkoutScreen() {
               <Text style={styles.addExerciseButtonText}>+ Add Exercise</Text>
             </TouchableOpacity>
           )}
+
+          <ExerciseSearchModal
+            visible={isExerciseModalVisible}
+            onClose={() => setIsExerciseModalVisible(false)}
+            onSelect={(exercise) => {
+              setSelectedExercise(exercise);
+              setIsExerciseModalVisible(false);
+            }}
+          />
         </View>
 
         {/* Exercise List */}
