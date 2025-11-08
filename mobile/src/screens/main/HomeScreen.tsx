@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { apiService } from '../../services/api';
@@ -23,6 +24,7 @@ interface FeedWorkout {
   user_id: number;
   username: string;
   bio?: string;
+  profile_pic?: string | null;
   like_count: number;
   comment_count: number;
   is_liked?: boolean;
@@ -57,6 +59,7 @@ export default function HomeScreen() {
         like_count: parseInt(w.like_count) || 0,
         comment_count: parseInt(w.comment_count) || 0,
         is_liked: w.is_liked === true || w.is_liked === 'true',
+        profile_pic: typeof w.profile_pic === 'string' && w.profile_pic.length > 0 ? w.profile_pic : null,
         exercise_count: w.exercise_count !== undefined ? parseInt(w.exercise_count) || 0 : 0,
         total_sets: w.total_sets !== undefined ? parseInt(w.total_sets) || 0 : 0,
         total_volume: w.total_volume !== undefined ? parseInt(w.total_volume) || 0 : 0,
@@ -151,6 +154,11 @@ export default function HomeScreen() {
     return `${isInteger ? weight : weight.toFixed(1)} lb`;
   };
 
+  const getProfileImageUri = (profilePic?: string | null) => {
+    if (!profilePic) return null;
+    return profilePic.startsWith('data:') ? profilePic : `data:image/jpeg;base64,${profilePic}`;
+  };
+
   return (
     <ScrollView 
       style={styles.container}
@@ -176,8 +184,11 @@ export default function HomeScreen() {
         </View>
       ) : (
         <View style={styles.content}>
-          {workouts.map((workout) => (
-            <TouchableOpacity
+          {workouts.map((workout) => {
+            const profileImageUri = getProfileImageUri(workout.profile_pic);
+
+            return (
+              <TouchableOpacity
               key={workout.id}
               style={styles.workoutCard}
               onPress={() => navigation.navigate('WorkoutDetail' as never, { workoutId: workout.id } as never)}
@@ -194,9 +205,13 @@ export default function HomeScreen() {
                     } as never);
                   }}
                 >
-                  <Text style={styles.userAvatarText}>
-                    {workout.username.charAt(0).toUpperCase()}
-                  </Text>
+                  {profileImageUri ? (
+                    <Image source={{ uri: profileImageUri }} style={styles.userAvatarImage} />
+                  ) : (
+                    <Text style={styles.userAvatarText}>
+                      {workout.username.charAt(0).toUpperCase()}
+                    </Text>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.userDetails}
@@ -329,7 +344,8 @@ export default function HomeScreen() {
                 <View style={styles.actionSpacer} />
               </View>
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
       )}
     </ScrollView>
@@ -408,6 +424,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  userAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
   },
   userDetails: {
     flex: 1,
