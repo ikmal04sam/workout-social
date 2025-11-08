@@ -11,6 +11,21 @@ import CreateWorkoutScreen from '../screens/workout/CreateWorkoutScreen';
 
 const Tab = createBottomTabNavigator();
 
+// Discover button component for header
+function DiscoverHeaderButton() {
+  const navigation = useNavigation();
+
+  return (
+    <TouchableOpacity
+      style={headerStyles.searchButton}
+      onPress={() => navigation.navigate('Discover' as never)}
+      activeOpacity={0.7}
+    >
+      <Text style={headerStyles.searchIcon}>🔍</Text>
+    </TouchableOpacity>
+  );
+}
+
 // Profile button component for header
 function ProfileHeaderButton() {
   const navigation = useNavigation();
@@ -80,6 +95,10 @@ export default function MainTabNavigator() {
         component={HomeScreen}
         options={{
           headerTitle: 'Your Feed',
+          headerLeft: () => <DiscoverHeaderButton />,
+          headerLeftContainerStyle: {
+            paddingLeft: 16,
+          },
           headerRight: () => <ProfileHeaderButton />,
           headerRightContainerStyle: {
             paddingRight: 16,
@@ -164,25 +183,39 @@ const styles = StyleSheet.create({
 const headerStyles = StyleSheet.create({
   profileButton: {
     marginRight: 4,
-    marginTop: -4,
+    marginTop: -6,
   },
   profilePic: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#e0e0e0',
   },
   profilePicPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profilePicText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
+  },
+  searchButton: {
+    width: 36,
+    height: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f4ff',
+    borderRadius: 18,
+    marginBottom: 0,
+    marginTop: -6,
+  },
+  searchIcon: {
+    fontSize: 18,
   },
 });
