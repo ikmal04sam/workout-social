@@ -426,15 +426,71 @@ router.get('/feed', authenticateToken, async (req, res) => {
         u.profile_pic,
         COUNT(DISTINCT l.id) as like_count,
         COUNT(DISTINCT c.id) as comment_count,
-        CASE WHEN my_likes.id IS NOT NULL THEN true ELSE false END as is_liked
+        CASE WHEN my_likes.id IS NOT NULL THEN true ELSE false END as is_liked,
+        COALESCE(workout_stats.exercise_count, 0) as exercise_count,
+        COALESCE(workout_stats.total_sets, 0) as total_sets,
+        COALESCE(workout_stats.total_volume, 0) as total_volume,
+        COALESCE(workout_stats.muscle_groups, ARRAY[]::text[]) as muscle_groups,
+        COALESCE(workout_stats.exercise_previews, '[]'::jsonb) as exercise_previews
       FROM workouts w
       JOIN users u ON w.user_id = u.id
       JOIN follows f ON f.following_id = w.user_id
       LEFT JOIN likes l ON l.workout_id = w.id
       LEFT JOIN comments c ON c.workout_id = w.id
       LEFT JOIN likes my_likes ON my_likes.workout_id = w.id AND my_likes.user_id = $1
+      LEFT JOIN LATERAL (
+        SELECT 
+          COUNT(*) as exercise_count,
+          COALESCE(SUM(exercise_stats.set_count), 0) as total_sets,
+          COALESCE(SUM(exercise_stats.total_volume), 0) as total_volume,
+          ARRAY_REMOVE(ARRAY_AGG(DISTINCT e.muscle_group), NULL::text) as muscle_groups,
+          (
+            SELECT jsonb_agg(jsonb_build_object(
+              'name', preview_data.name,
+              'set_count', preview_data.set_count,
+              'total_reps', preview_data.total_reps,
+              'top_weight', preview_data.top_weight,
+              'total_volume', preview_data.total_volume
+            ))
+            FROM (
+              SELECT 
+                e2.name,
+                COALESCE(exercise_stats2.set_count, 0) as set_count,
+                COALESCE(exercise_stats2.total_reps, 0) as total_reps,
+                COALESCE(exercise_stats2.top_weight, 0) as top_weight,
+                COALESCE(exercise_stats2.total_volume, 0) as total_volume,
+                we2.order_in_workout
+              FROM workout_exercises we2
+              JOIN exercises e2 ON e2.id = we2.exercise_id
+              LEFT JOIN LATERAL (
+                SELECT 
+                  COUNT(*) as set_count,
+                  COALESCE(SUM(s.reps), 0) as total_reps,
+                  COALESCE(MAX(s.weight), 0) as top_weight,
+                  COALESCE(SUM(s.reps * COALESCE(s.weight, 0)), 0) as total_volume
+                FROM sets s
+                WHERE s.workout_exercise_id = we2.id
+              ) exercise_stats2 ON true
+              WHERE we2.workout_id = w.id
+              ORDER BY we2.order_in_workout
+              LIMIT 3
+            ) as preview_data
+          ) as exercise_previews
+        FROM workout_exercises we
+        JOIN exercises e ON e.id = we.exercise_id
+        LEFT JOIN LATERAL (
+          SELECT 
+            COUNT(*) as set_count,
+            COALESCE(SUM(s.reps), 0) as total_reps,
+            COALESCE(MAX(s.weight), 0) as top_weight,
+            COALESCE(SUM(s.reps * COALESCE(s.weight, 0)), 0) as total_volume
+          FROM sets s
+          WHERE s.workout_exercise_id = we.id
+        ) as exercise_stats ON true
+        WHERE we.workout_id = w.id
+      ) as workout_stats ON true
       WHERE f.follower_id = $1 AND w.is_public = true
-      GROUP BY w.id, u.id, u.username, u.bio, u.profile_pic, my_likes.id
+      GROUP BY w.id, u.id, u.username, u.bio, u.profile_pic, my_likes.id, workout_stats.exercise_count, workout_stats.total_sets, workout_stats.total_volume, workout_stats.muscle_groups, workout_stats.exercise_previews
       ORDER BY w.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, parseInt(limit as string), parseInt(offset as string)]);
@@ -471,14 +527,70 @@ router.get('/discover', authenticateToken, async (req, res) => {
         u.profile_pic,
         COUNT(DISTINCT l.id) as like_count,
         COUNT(DISTINCT c.id) as comment_count,
-        CASE WHEN my_likes.id IS NOT NULL THEN true ELSE false END as is_liked
+        CASE WHEN my_likes.id IS NOT NULL THEN true ELSE false END as is_liked,
+        COALESCE(workout_stats.exercise_count, 0) as exercise_count,
+        COALESCE(workout_stats.total_sets, 0) as total_sets,
+        COALESCE(workout_stats.total_volume, 0) as total_volume,
+        COALESCE(workout_stats.muscle_groups, ARRAY[]::text[]) as muscle_groups,
+        COALESCE(workout_stats.exercise_previews, '[]'::jsonb) as exercise_previews
       FROM workouts w
       JOIN users u ON w.user_id = u.id
       LEFT JOIN likes l ON l.workout_id = w.id
       LEFT JOIN comments c ON c.workout_id = w.id
       LEFT JOIN likes my_likes ON my_likes.workout_id = w.id AND my_likes.user_id = $1
+      LEFT JOIN LATERAL (
+        SELECT 
+          COUNT(*) as exercise_count,
+          COALESCE(SUM(exercise_stats.set_count), 0) as total_sets,
+          COALESCE(SUM(exercise_stats.total_volume), 0) as total_volume,
+          ARRAY_REMOVE(ARRAY_AGG(DISTINCT e.muscle_group), NULL::text) as muscle_groups,
+          (
+            SELECT jsonb_agg(jsonb_build_object(
+              'name', preview_data.name,
+              'set_count', preview_data.set_count,
+              'total_reps', preview_data.total_reps,
+              'top_weight', preview_data.top_weight,
+              'total_volume', preview_data.total_volume
+            ))
+            FROM (
+              SELECT 
+                e2.name,
+                COALESCE(exercise_stats2.set_count, 0) as set_count,
+                COALESCE(exercise_stats2.total_reps, 0) as total_reps,
+                COALESCE(exercise_stats2.top_weight, 0) as top_weight,
+                COALESCE(exercise_stats2.total_volume, 0) as total_volume,
+                we2.order_in_workout
+              FROM workout_exercises we2
+              JOIN exercises e2 ON e2.id = we2.exercise_id
+              LEFT JOIN LATERAL (
+                SELECT 
+                  COUNT(*) as set_count,
+                  COALESCE(SUM(s.reps), 0) as total_reps,
+                  COALESCE(MAX(s.weight), 0) as top_weight,
+                  COALESCE(SUM(s.reps * COALESCE(s.weight, 0)), 0) as total_volume
+                FROM sets s
+                WHERE s.workout_exercise_id = we2.id
+              ) exercise_stats2 ON true
+              WHERE we2.workout_id = w.id
+              ORDER BY we2.order_in_workout
+              LIMIT 3
+            ) as preview_data
+          ) as exercise_previews
+        FROM workout_exercises we
+        JOIN exercises e ON e.id = we.exercise_id
+        LEFT JOIN LATERAL (
+          SELECT 
+            COUNT(*) as set_count,
+            COALESCE(SUM(s.reps), 0) as total_reps,
+            COALESCE(MAX(s.weight), 0) as top_weight,
+            COALESCE(SUM(s.reps * COALESCE(s.weight, 0)), 0) as total_volume
+          FROM sets s
+          WHERE s.workout_exercise_id = we.id
+        ) as exercise_stats ON true
+        WHERE we.workout_id = w.id
+      ) as workout_stats ON true
       WHERE w.is_public = true
-      GROUP BY w.id, u.id, u.username, u.bio, u.profile_pic, my_likes.id
+      GROUP BY w.id, u.id, u.username, u.bio, u.profile_pic, my_likes.id, workout_stats.exercise_count, workout_stats.total_sets, workout_stats.total_volume, workout_stats.muscle_groups, workout_stats.exercise_previews
       ORDER BY w.created_at DESC
       LIMIT $2 OFFSET $3
     `, [userId, parseInt(limit as string), parseInt(offset as string)]);

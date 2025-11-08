@@ -23,9 +23,22 @@ interface FeedWorkout {
   user_id: number;
   username: string;
   bio?: string;
-  like_count: string;
-  comment_count: string;
+  like_count: number;
+  comment_count: number;
   is_liked?: boolean;
+  exercise_count?: number;
+  total_sets?: number;
+  total_volume?: number;
+  muscle_groups?: string[];
+  exercise_previews?: ExercisePreview[];
+}
+
+interface ExercisePreview {
+  name: string;
+  set_count: number;
+  total_reps: number;
+  top_weight: number;
+  total_volume: number;
 }
 
 export default function HomeScreen() {
@@ -44,6 +57,19 @@ export default function HomeScreen() {
         like_count: parseInt(w.like_count) || 0,
         comment_count: parseInt(w.comment_count) || 0,
         is_liked: w.is_liked === true || w.is_liked === 'true',
+        exercise_count: w.exercise_count !== undefined ? parseInt(w.exercise_count) || 0 : 0,
+        total_sets: w.total_sets !== undefined ? parseInt(w.total_sets) || 0 : 0,
+        total_volume: w.total_volume !== undefined ? parseInt(w.total_volume) || 0 : 0,
+        muscle_groups: Array.isArray(w.muscle_groups) ? w.muscle_groups : [],
+        exercise_previews: Array.isArray(w.exercise_previews)
+          ? w.exercise_previews.map((preview: any) => ({
+              name: preview?.name || 'Exercise',
+              set_count: parseInt(preview?.set_count) || 0,
+              total_reps: parseInt(preview?.total_reps) || 0,
+              top_weight: parseFloat(preview?.top_weight) || 0,
+              total_volume: parseFloat(preview?.total_volume) || 0,
+            }))
+          : [],
       }));
       setWorkouts(formattedWorkouts);
     } catch (error) {
@@ -117,6 +143,12 @@ export default function HomeScreen() {
         year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
       });
     }
+  };
+
+  const formatWeight = (weight: number) => {
+    if (!weight || weight <= 0) return '0 lb';
+    const isInteger = Number.isInteger(weight);
+    return `${isInteger ? weight : weight.toFixed(1)} lb`;
   };
 
   return (
@@ -203,11 +235,61 @@ export default function HomeScreen() {
                 )}
               </View>
 
+              {/* Workout Summary Chips */}
+              <View style={styles.chipRow}>
+                <View style={styles.chip}>
+                  <Text style={styles.chipLabel}>Exercises</Text>
+                  <Text style={styles.chipValue}>{workout.exercise_count || 0}</Text>
+                </View>
+                <View style={styles.chip}>
+                  <Text style={styles.chipLabel}>Sets</Text>
+                  <Text style={styles.chipValue}>{workout.total_sets || 0}</Text>
+                </View>
+                {workout.total_volume ? (
+                  <View style={styles.chip}>
+                    <Text style={styles.chipLabel}>Volume</Text>
+                    <Text style={styles.chipValue}>{Math.round(workout.total_volume)} lb</Text>
+                  </View>
+                ) : null}
+                {(workout.muscle_groups && workout.muscle_groups.length > 0) ? (
+                  <View style={[styles.chip, styles.muscleChip]}>
+                    <Text style={styles.chipLabel}>Muscles</Text>
+                    <Text style={styles.chipValue} numberOfLines={1}>
+                      {workout.muscle_groups.slice(0, 2).join(', ')}
+                      {workout.muscle_groups.length > 2 ? ' +' : ''}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
               {/* Workout Notes Preview */}
               {workout.notes && (
                 <Text style={styles.workoutNotes} numberOfLines={2}>
                   {workout.notes}
                 </Text>
+              )}
+
+              {/* Exercise Preview List */}
+              {workout.exercise_previews && workout.exercise_previews.length > 0 && (
+                <View style={styles.exercisePreviewContainer}>
+                  {workout.exercise_previews.map((exercise, index) => (
+                    <View key={`${workout.id}-exercise-${index}`} style={styles.exercisePreviewRow}>
+                      <View style={styles.exercisePreviewHeader}>
+                        <Text style={styles.exercisePreviewName}>{exercise.name}</Text>
+                        <Text style={styles.exercisePreviewSets}>{exercise.set_count} sets</Text>
+                      </View>
+                      <Text style={styles.exercisePreviewMeta}>
+                        {exercise.total_reps > 0 ? `${exercise.total_reps} reps` : '—'}
+                        {exercise.top_weight > 0 ? ` • Top ${formatWeight(exercise.top_weight)}` : ''}
+                      </Text>
+                    </View>
+                  ))}
+                  {workout.exercise_count && workout.exercise_count > 3 && (
+                    <Text style={styles.exercisePreviewMore}>
+                      +{workout.exercise_count - 3} more exercises
+                    </Text>
+                  )}
+                </View>
               )}
 
               {/* Social Actions */}
@@ -385,6 +467,76 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
     marginBottom: 12,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+    marginHorizontal: -4,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: '#f1f4ff',
+    minWidth: 80,
+    marginHorizontal: 4,
+    marginBottom: 8,
+  },
+  muscleChip: {
+    flexShrink: 1,
+    maxWidth: '60%',
+  },
+  chipLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    color: '#5a6bff',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  chipValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2a62',
+  },
+  exercisePreviewContainer: {
+    borderWidth: 1,
+    borderColor: '#eef0f5',
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#fafbff',
+    marginBottom: 12,
+  },
+  exercisePreviewRow: {
+    marginBottom: 10,
+  },
+  exercisePreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  exercisePreviewName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+    marginRight: 8,
+  },
+  exercisePreviewSets: {
+    fontSize: 13,
+    color: '#667085',
+    fontWeight: '500',
+  },
+  exercisePreviewMeta: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#667085',
+  },
+  exercisePreviewMore: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#5a6bff',
+    fontWeight: '600',
   },
   socialActions: {
     flexDirection: 'row',
