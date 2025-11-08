@@ -102,8 +102,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     // Get workout details
     const workoutResult = await pool.query(
-      'SELECT * FROM workouts WHERE id = $1 AND user_id = $2',
-      [id, userId]
+      'SELECT * FROM workouts WHERE id = $1',
+      [id]
     );
 
     if (workoutResult.rows.length === 0) {
@@ -111,6 +111,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     const workout = workoutResult.rows[0];
+
+    // Ensure user has access (owner or public workout)
+    if (workout.user_id !== userId && !workout.is_public) {
+      return res.status(403).json({ error: 'Not authorized to view this workout' });
+    }
 
     // Get exercises with sets
     const exercisesResult = await pool.query(`
