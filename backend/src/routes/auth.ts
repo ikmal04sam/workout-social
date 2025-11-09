@@ -327,4 +327,66 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
   }
 });
 
+// Get list of users the current user is following
+router.get('/following', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+
+    const result = await pool.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.bio,
+        u.profile_pic,
+        COUNT(DISTINCT fw.following_id) as following_count,
+        COUNT(DISTINCT fr.follower_id) as follower_count
+      FROM follows f
+      JOIN users u ON f.following_id = u.id
+      LEFT JOIN follows fw ON fw.follower_id = u.id
+      LEFT JOIN follows fr ON fr.following_id = u.id
+      WHERE f.follower_id = $1
+      GROUP BY u.id, u.username, u.bio, u.profile_pic
+      ORDER BY u.username
+    `, [userId]);
+
+    res.json({
+      following: result.rows
+    });
+  } catch (error) {
+    console.error('Get following list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get list of users who follow the current user
+router.get('/followers', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+
+    const result = await pool.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.bio,
+        u.profile_pic,
+        COUNT(DISTINCT fw.following_id) as following_count,
+        COUNT(DISTINCT fr.follower_id) as follower_count
+      FROM follows f
+      JOIN users u ON f.follower_id = u.id
+      LEFT JOIN follows fw ON fw.follower_id = u.id
+      LEFT JOIN follows fr ON fr.following_id = u.id
+      WHERE f.following_id = $1
+      GROUP BY u.id, u.username, u.bio, u.profile_pic
+      ORDER BY u.username
+    `, [userId]);
+
+    res.json({
+      followers: result.rows
+    });
+  } catch (error) {
+    console.error('Get followers list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -12,6 +12,9 @@ import WorkoutDetailScreen from './src/screens/workout/WorkoutDetailScreen';
 import CommentsScreen from './src/screens/workout/CommentsScreen';
 import UserProfileScreen from './src/screens/user/UserProfileScreen';
 import EditProfileScreen from './src/screens/user/EditProfileScreen';
+import FollowersScreen from './src/screens/profile/FollowersScreen';
+import FollowingScreen from './src/screens/profile/FollowingScreen';
+import MyWorkoutsScreen from './src/screens/profile/MyWorkoutsScreen';
 
 // Import AuthContext
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -55,6 +58,21 @@ function AppNavigator() {
           <Stack.Screen 
             name="EditProfile" 
             component={EditProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Followers"
+            component={FollowersScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Following"
+            component={FollowingScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MyWorkoutsList"
+            component={MyWorkoutsScreen}
             options={{ headerShown: false }}
           />
         </>

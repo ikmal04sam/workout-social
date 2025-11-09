@@ -257,6 +257,14 @@ class ApiService {
     return await this.request<{ workouts: Workout[] }>('/workouts');
   }
 
+  async getFollowers(): Promise<{ followers: any[] }> {
+    return await this.request<{ followers: any[] }>('/auth/followers');
+  }
+
+  async getFollowing(): Promise<{ following: any[] }> {
+    return await this.request<{ following: any[] }>('/auth/following');
+  }
+
   async getWorkout(workoutId: number): Promise<{ workout: Workout }> {
     return await this.request<{ workout: Workout }>(`/workouts/${workoutId}`);
   }

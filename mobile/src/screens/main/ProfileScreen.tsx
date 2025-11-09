@@ -127,19 +127,28 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.profileHeaderContent}>
             <Text style={styles.username}>{activeUser?.username || 'Loading...'}</Text>
-            <View style={styles.compactStatsRow}>
-              <View style={styles.compactStatItem}>
-                <Text style={styles.compactLabel}>Workouts</Text>
-                <Text style={styles.compactValue}>{stats.workouts}</Text>
-              </View>
-              <View style={styles.compactStatItem}>
-                <Text style={styles.compactLabel}>Followers</Text>
-                <Text style={styles.compactValue}>{stats.followers}</Text>
-              </View>
-              <View style={styles.compactStatItem}>
-                <Text style={styles.compactLabel}>Following</Text>
-                <Text style={styles.compactValue}>{stats.following}</Text>
-              </View>
+              <View style={styles.compactStatsRow}>
+                <TouchableOpacity
+                  style={styles.compactStatItem}
+                  onPress={() => navigation.navigate('MyWorkoutsList' as never)}
+                >
+                  <Text style={styles.compactLabel}>Workouts</Text>
+                  <Text style={styles.compactValue}>{stats.workouts}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.compactStatItem}
+                  onPress={() => navigation.navigate('Followers' as never)}
+                >
+                  <Text style={styles.compactLabel}>Followers</Text>
+                  <Text style={styles.compactValue}>{stats.followers}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.compactStatItem}
+                  onPress={() => navigation.navigate('Following' as never)}
+                >
+                  <Text style={styles.compactLabel}>Following</Text>
+                  <Text style={styles.compactValue}>{stats.following}</Text>
+                </TouchableOpacity>
             </View>
           </View>
         </View>
