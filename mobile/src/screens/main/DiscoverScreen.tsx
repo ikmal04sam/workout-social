@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { apiService } from '../../services/api';
@@ -20,6 +21,7 @@ interface SearchUser {
   follower_count: string;
   following_count: string;
   is_following: boolean;
+  profile_pic?: string | null;
 }
 
 export default function DiscoverScreen() {
@@ -119,8 +121,15 @@ export default function DiscoverScreen() {
         </View>
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {users.map((user) => (
-            <TouchableOpacity
+          {users.map((user) => {
+            const profileImageUri = user.profile_pic
+              ? (user.profile_pic.startsWith?.('data:')
+                  ? user.profile_pic
+                  : `data:image/jpeg;base64,${user.profile_pic}`)
+              : null;
+
+            return (
+              <TouchableOpacity
               key={user.id}
               style={styles.userCard}
               onPress={() =>
@@ -132,9 +141,13 @@ export default function DiscoverScreen() {
             >
               <View style={styles.userInfo}>
                 <View style={styles.userAvatar}>
-                  <Text style={styles.userAvatarText}>
-                    {user.username.charAt(0).toUpperCase()}
-                  </Text>
+                  {profileImageUri ? (
+                    <Image source={{ uri: profileImageUri }} style={styles.userAvatarImage} />
+                  ) : (
+                    <Text style={styles.userAvatarText}>
+                      {user.username.charAt(0).toUpperCase()}
+                    </Text>
+                  )}
                 </View>
                 <View style={styles.userDetails}>
                   <Text style={styles.username}>{user.username}</Text>
@@ -160,7 +173,8 @@ export default function DiscoverScreen() {
                 )}
               </View>
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
     </View>
@@ -246,6 +260,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  userAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
   },
   userAvatarText: {
     color: 'white',
