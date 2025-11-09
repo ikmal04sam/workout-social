@@ -2,7 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { apiService, Workout } from '../../services/api';
+import { apiService, Workout, User } from '../../services/api';
+
+interface ProfileStats {
+  workout_count: number;
+  follower_count: number;
+  following_count: number;
+}
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -10,12 +16,37 @@ export default function ProfileScreen() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [profileData, setProfileData] = useState<User | null>(null);
+  const [profileStats, setProfileStats] = useState<ProfileStats>({
+    workout_count: 0,
+    follower_count: 0,
+    following_count: 0,
+  });
 
   const loadWorkouts = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getUserWorkouts();
-      setWorkouts(response.workouts || []);
+      const [workoutsResponse, profileResponse] = await Promise.all([
+        apiService.getUserWorkouts(),
+        apiService.getProfile(),
+      ]);
+
+      const fetchedWorkouts = workoutsResponse.workouts || [];
+      setWorkouts(fetchedWorkouts);
+
+      if (profileResponse?.user) {
+        setProfileData(profileResponse.user);
+        setProfileStats({
+          workout_count: profileResponse.user.workout_count ?? fetchedWorkouts.length,
+          follower_count: profileResponse.user.follower_count ?? 0,
+          following_count: profileResponse.user.following_count ?? 0,
+        });
+      } else {
+        setProfileStats((prev) => ({
+          ...prev,
+          workout_count: fetchedWorkouts.length,
+        }));
+      }
     } catch (error) {
       console.error('Error loading workouts:', error);
       Alert.alert('Error', 'Failed to load workouts');
@@ -61,6 +92,19 @@ export default function ProfileScreen() {
     });
   };
 
+  const activeUser = profileData || user;
+  const profilePicUri = activeUser?.profile_pic
+    ? activeUser.profile_pic.startsWith('data:')
+      ? activeUser.profile_pic
+      : `data:image/jpeg;base64,${activeUser.profile_pic}`
+    : null;
+
+  const stats = {
+    workouts: profileStats.workout_count ?? workouts.length,
+    followers: profileStats.follower_count ?? 0,
+    following: profileStats.following_count ?? 0,
+  };
+
   return (
     <ScrollView 
       style={styles.container}
@@ -68,48 +112,53 @@ export default function ProfileScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
-        <Text style={styles.subtitle}>Your fitness journey</Text>
-      </View>
-      
       <View style={styles.content}>
-        <View style={styles.profileCard}>
-          {/* Profile Picture */}
+        <View style={styles.profileHeaderRow}>
           <View style={styles.profilePicContainer}>
-            {user?.profile_pic ? (
-              <Image
-                source={{
-                  uri: user.profile_pic.startsWith('data:') 
-                    ? user.profile_pic 
-                    : `data:image/jpeg;base64,${user.profile_pic}`
-                }}
-                style={styles.profilePic}
-              />
+            {profilePicUri ? (
+              <Image source={{ uri: profilePicUri }} style={styles.profilePic} />
             ) : (
               <View style={styles.profilePicPlaceholder}>
                 <Text style={styles.profilePicPlaceholderText}>
-                  {user?.username?.charAt(0).toUpperCase() || '?'}
+                  {activeUser?.username?.charAt(0).toUpperCase() || '?'}
                 </Text>
               </View>
             )}
           </View>
-
-          <Text style={styles.username}>{user?.username || 'Loading...'}</Text>
-          <Text style={styles.email}>{user?.email || ''}</Text>
-          <Text style={styles.bio}>{user?.bio || 'No bio yet'}</Text>
-          <Text style={styles.memberSince}>
-            Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
-          </Text>
-
-          {/* Edit Button */}
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => navigation.navigate('EditProfile' as never)}
-          >
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <View style={styles.profileHeaderContent}>
+            <Text style={styles.username}>{activeUser?.username || 'Loading...'}</Text>
+            <View style={styles.compactStatsRow}>
+              <View style={styles.compactStatItem}>
+                <Text style={styles.compactLabel}>Workouts</Text>
+                <Text style={styles.compactValue}>{stats.workouts}</Text>
+              </View>
+              <View style={styles.compactStatItem}>
+                <Text style={styles.compactLabel}>Followers</Text>
+                <Text style={styles.compactValue}>{stats.followers}</Text>
+              </View>
+              <View style={styles.compactStatItem}>
+                <Text style={styles.compactLabel}>Following</Text>
+                <Text style={styles.compactValue}>{stats.following}</Text>
+              </View>
+            </View>
+          </View>
         </View>
+
+        <View style={styles.profileDetailsCard}>
+          {activeUser?.email ? <Text style={styles.email}>{activeUser.email}</Text> : null}
+          <Text style={styles.bio}>{activeUser?.bio || 'No bio yet'}</Text>
+          <Text style={styles.memberSince}>
+            Member since {activeUser?.created_at ? new Date(activeUser.created_at).toLocaleDateString() : ''}
+          </Text>
+        </View>
+
+        {/* Edit Button */}
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => navigation.navigate('EditProfile' as never)}
+        >
+          <Text style={styles.editButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
 
         {/* Workouts Section */}
         <View style={styles.workoutsSection}>
@@ -171,84 +220,99 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-  },
   content: {
     padding: 20,
   },
   profileCard: {
     backgroundColor: 'white',
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 16,
     marginBottom: 20,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
-  profilePicContainer: {
+  profileHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
+  profilePicContainer: {
+    marginRight: 16,
+  },
   profilePic: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#e0e0e0',
   },
   profilePicPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profilePicPlaceholderText: {
     color: 'white',
-    fontSize: 40,
+    fontSize: 30,
     fontWeight: 'bold',
   },
+  profileHeaderContent: {
+    flex: 1,
+    alignItems: 'flex-start',
+    marginRight: 12,
+  },
   username: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#2d2d2d',
+    marginBottom: 8,
+  },
+  compactStatsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  compactStatItem: {
+    alignItems: 'flex-start',
+  },
+  compactLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  compactValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  profileDetailsCard: {
+    width: '100%',
+    marginBottom: 16,
+    paddingHorizontal: 8,
   },
   email: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   bio: {
     fontSize: 16,
     color: '#666',
-    textAlign: 'center',
-    marginBottom: 10,
-    fontStyle: 'italic',
+    textAlign: 'left',
+    marginBottom: 4,
   },
   memberSince: {
     fontSize: 14,
     color: '#999',
     fontStyle: 'italic',
-    marginBottom: 16,
   },
   editButton: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 25,
-    marginTop: 8,
+    marginTop: 12,
   },
   editButtonText: {
     color: 'white',
@@ -256,6 +320,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   workoutsSection: {
+    marginTop: 24,
     marginBottom: 20,
   },
   sectionTitle: {

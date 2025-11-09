@@ -11,6 +11,9 @@ export interface User {
   bio: string;
   profile_pic?: string | null;
   created_at: string;
+  workout_count?: number;
+  follower_count?: number;
+  following_count?: number;
 }
 
 export interface UpdateProfileRequest {

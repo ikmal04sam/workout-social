@@ -144,8 +144,25 @@ router.get('/profile', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const user = result.rows[0];
+
+    const [workoutCountResult, followerCountResult, followingCountResult] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM workouts WHERE user_id = $1', [userId]),
+      pool.query('SELECT COUNT(*) FROM follows WHERE following_id = $1', [userId]),
+      pool.query('SELECT COUNT(*) FROM follows WHERE follower_id = $1', [userId])
+    ]);
+
+    const workout_count = parseInt(workoutCountResult.rows[0].count || '0', 10);
+    const follower_count = parseInt(followerCountResult.rows[0].count || '0', 10);
+    const following_count = parseInt(followingCountResult.rows[0].count || '0', 10);
+
     res.json({
-      user: result.rows[0]
+      user: {
+        ...user,
+        workout_count,
+        follower_count,
+        following_count
+      }
     });
 
   } catch (error) {
