@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -9,6 +9,75 @@ interface ProfileStats {
   follower_count: number;
   following_count: number;
 }
+
+interface WeeklyDuration {
+  start: Date;
+  end: Date;
+  hours: number;
+  label: string;
+  monthLabel: string;
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const getWeekStart = (date: Date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = (day + 6) % 7; // Monday as start of week
+  d.setDate(d.getDate() - diff);
+  return d;
+};
+
+const buildWeeklyDurationData = (workouts: Workout[]): WeeklyDuration[] => {
+  const now = new Date();
+  const currentWeekStart = getWeekStart(now);
+  const weeks: WeeklyDuration[] = [];
+
+  for (let i = 11; i >= 0; i--) {
+    const start = new Date(currentWeekStart);
+    start.setDate(start.getDate() - i * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    weeks.push({
+      start,
+      end,
+      hours: 0,
+      label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      monthLabel: start.toLocaleDateString('en-US', { month: 'short' }),
+    });
+  }
+
+  if (!workouts) {
+    return weeks;
+  }
+
+  workouts.forEach((workout) => {
+    if (!workout.date || workout.duration == null) return;
+    const workoutDate = new Date(workout.date);
+    if (Number.isNaN(workoutDate.getTime())) return;
+    const durationMinutes = Number(workout.duration);
+    if (Number.isNaN(durationMinutes) || durationMinutes <= 0) return;
+
+    for (const week of weeks) {
+      if (workoutDate >= week.start && workoutDate < week.end) {
+        week.hours += durationMinutes / 60;
+        break;
+      }
+    }
+  });
+
+  return weeks;
+};
+
+const getWeeksAgoText = (date?: Date | null) => {
+  if (!date) return 'No workouts yet';
+  const now = new Date();
+  const diffWeeks = Math.floor((now.getTime() - date.getTime()) / (7 * MS_PER_DAY));
+  if (diffWeeks <= 0) return 'This week';
+  if (diffWeeks === 1) return '1 week ago';
+  return `${diffWeeks} weeks ago`;
+};
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -105,6 +174,29 @@ export default function ProfileScreen() {
     following: profileStats.following_count ?? 0,
   };
 
+  const weeklyDurationData = useMemo(() => buildWeeklyDurationData(workouts), [workouts]);
+  const maxWeeklyHours = useMemo(
+    () => weeklyDurationData.reduce((max, week) => Math.max(max, week.hours), 0),
+    [weeklyDurationData]
+  );
+  const latestWeekHours =
+    weeklyDurationData.length > 0 ? weeklyDurationData[weeklyDurationData.length - 1].hours : 0;
+
+  const lastWorkoutDate = useMemo(() => {
+    if (!workouts || workouts.length === 0) return null;
+    return workouts.reduce<Date | null>((latest, workout) => {
+      if (!workout.date) return latest;
+      const workoutDate = new Date(workout.date);
+      if (Number.isNaN(workoutDate.getTime())) return latest;
+      if (!latest || workoutDate > latest) {
+        return workoutDate;
+      }
+      return latest;
+    }, null);
+  }, [workouts]);
+
+  const lastWorkoutAgoText = getWeeksAgoText(lastWorkoutDate);
+
   return (
     <ScrollView 
       style={styles.container}
@@ -168,6 +260,48 @@ export default function ProfileScreen() {
         >
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
+
+        {/* Weekly Activity Chart */}
+        <View style={[styles.chartCard, styles.chartCardSpacing]}>
+          <View style={styles.chartHeader}>
+            <Text style={styles.chartSummary}>
+              <Text style={styles.chartSummaryValue}>{latestWeekHours.toFixed(1)} hrs</Text>{' '}
+              {lastWorkoutAgoText}
+            </Text>
+            <View style={styles.chartRange}>
+              <Text style={styles.chartRangeText}>Last 3 months</Text>
+              <Text style={styles.chartRangeCaret}>▾</Text>
+            </View>
+          </View>
+
+          <View style={styles.chart}>
+            {weeklyDurationData.map((week, index) => {
+              const barHeight =
+                maxWeeklyHours > 0 ? Math.max(6, (week.hours / maxWeeklyHours) * 140) : 6;
+              const showLabel = index % 3 === 0;
+              return (
+                <View key={`${week.start.toISOString()}-${index}`} style={styles.chartBarWrapper}>
+                  <View style={styles.chartBarTrack}>
+                    <View style={[styles.chartBar, { height: barHeight }]} />
+                  </View>
+                  <Text style={styles.chartBarLabel}>{showLabel ? week.monthLabel : ''}</Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.chartTabs}>
+            <View style={[styles.chartTab, styles.chartTabActive]}>
+              <Text style={[styles.chartTabText, styles.chartTabTextActive]}>Duration</Text>
+            </View>
+            <View style={styles.chartTab}>
+              <Text style={styles.chartTabText}>Volume</Text>
+            </View>
+            <View style={styles.chartTab}>
+              <Text style={styles.chartTabText}>Reps</Text>
+            </View>
+          </View>
+        </View>
 
         {/* Workouts Section */}
         <View style={styles.workoutsSection}>
@@ -294,6 +428,104 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
+  },
+  chartCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  chartCardSpacing: {
+    marginTop: 16,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  chartSummary: {
+    fontSize: 14,
+    color: '#667085',
+  },
+  chartSummaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  chartRange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chartRangeText: {
+    fontSize: 14,
+    color: '#0A84FF',
+    fontWeight: '600',
+  },
+  chartRangeCaret: {
+    fontSize: 12,
+    color: '#0A84FF',
+    marginTop: 2,
+  },
+  chart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 170,
+    marginBottom: 16,
+    paddingHorizontal: 6,
+  },
+  chartBarWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 2,
+  },
+  chartBarTrack: {
+    width: 12,
+    height: 150,
+    borderRadius: 6,
+    backgroundColor: '#eef1ff',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  chartBar: {
+    width: '100%',
+    borderRadius: 6,
+    backgroundColor: '#0A84FF',
+  },
+  chartBarLabel: {
+    fontSize: 10,
+    color: '#98a2b3',
+    marginTop: 6,
+  },
+  chartTabs: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  chartTab: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#f0f3ff',
+  },
+  chartTabActive: {
+    backgroundColor: '#0A84FF',
+  },
+  chartTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  chartTabTextActive: {
+    color: 'white',
   },
   profileDetailsCard: {
     width: '100%',
