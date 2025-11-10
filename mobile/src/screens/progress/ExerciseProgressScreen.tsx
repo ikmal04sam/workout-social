@@ -11,6 +11,7 @@ import {
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { apiService, ExerciseDetails, ExerciseProgressPoint } from '../../services/api';
 import Svg, { Polyline, Circle, Line } from 'react-native-svg';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ExerciseProgressRouteParams = {
   ExerciseProgress: {
@@ -35,6 +36,7 @@ export default function ExerciseProgressScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<ExerciseProgressRouteParams, 'ExerciseProgress'>>();
   const { exerciseId, exerciseName, muscleGroup } = route.params;
+  const insets = useSafeAreaInsets();
 
   const [isLoading, setIsLoading] = useState(true);
   const [exercise, setExercise] = useState<ExerciseDetails | null>(null);
@@ -173,7 +175,12 @@ export default function ExerciseProgressScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 6 }]}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.headerBar}>
         <TouchableOpacity
           style={styles.headerBack}
@@ -245,17 +252,22 @@ export default function ExerciseProgressScreen() {
           </View>
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
   headerBar: {
@@ -396,12 +408,13 @@ const styles = StyleSheet.create({
   chartTabs: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
+    marginTop: 4,
   },
   chartTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 18,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
     backgroundColor: '#f0f3ff',
   },
   chartTabActive: {
