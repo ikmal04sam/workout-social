@@ -15,6 +15,7 @@ import EditProfileScreen from './src/screens/user/EditProfileScreen';
 import FollowersScreen from './src/screens/profile/FollowersScreen';
 import FollowingScreen from './src/screens/profile/FollowingScreen';
 import MyWorkoutsScreen from './src/screens/profile/MyWorkoutsScreen';
+import ExerciseProgressScreen from './src/screens/progress/ExerciseProgressScreen';
 
 // Import AuthContext
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -73,6 +74,11 @@ function AppNavigator() {
           <Stack.Screen
             name="MyWorkoutsList"
             component={MyWorkoutsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ExerciseProgress"
+            component={ExerciseProgressScreen}
             options={{ headerShown: false }}
           />
         </>

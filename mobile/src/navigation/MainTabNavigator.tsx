@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from '../screens/main/HomeScreen';
 import DiscoverScreen from '../screens/main/DiscoverScreen';
-import ExploreScreen from '../screens/main/ExploreScreen';
+import ProgressScreen from '../screens/progress/ProgressScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import CreateWorkoutScreen from '../screens/workout/CreateWorkoutScreen';
 
@@ -132,12 +132,12 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen 
-        name="Explore" 
-        component={ExploreScreen}
+        name="Progress" 
+        component={ProgressScreen}
         options={{
-          tabBarLabel: 'Explore',
+          tabBarLabel: 'Progress',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🌟</Text>
+            <Text style={{ color, fontSize: size }}>📈</Text>
           ),
         }}
       />

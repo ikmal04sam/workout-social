@@ -433,4 +433,53 @@ router.delete('/sets/:setId', authenticateToken, async (req, res) => {
   }
 });
 
+// Get exercise progress data for the authenticated user
+router.get('/exercise-progress/:exerciseId', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { exerciseId } = req.params;
+
+    const exerciseResult = await pool.query(
+      'SELECT id, name, description, muscle_group, equipment_type FROM exercises WHERE id = $1',
+      [exerciseId]
+    );
+
+    if (exerciseResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Exercise not found' });
+    }
+
+    const progressResult = await pool.query(
+      `
+        SELECT 
+          w.id as workout_id,
+          w.date,
+          MAX(COALESCE(s.weight, 0)) as max_weight,
+          SUM(COALESCE(s.reps, 0)) as total_reps,
+          SUM(COALESCE(s.weight, 0) * COALESCE(s.reps, 0)) as total_volume
+        FROM workouts w
+        JOIN workout_exercises we ON we.workout_id = w.id
+        JOIN sets s ON s.workout_exercise_id = we.id
+        WHERE w.user_id = $1 AND we.exercise_id = $2
+        GROUP BY w.id, w.date
+        ORDER BY w.date
+      `,
+      [userId, exerciseId]
+    );
+
+    res.json({
+      exercise: exerciseResult.rows[0],
+      progress: progressResult.rows.map((row) => ({
+        workout_id: row.workout_id,
+        date: row.date,
+        max_weight: row.max_weight ? Number(row.max_weight) : 0,
+        total_reps: row.total_reps ? Number(row.total_reps) : 0,
+        total_volume: row.total_volume ? Number(row.total_volume) : 0,
+      })),
+    });
+  } catch (error) {
+    console.error('Get exercise progress error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -95,6 +95,22 @@ export interface AddSetsToExerciseRequest {
   rest_time: number;
 }
 
+export interface ExerciseProgressPoint {
+  workout_id: number;
+  date: string;
+  max_weight: number;
+  total_reps: number;
+  total_volume: number;
+}
+
+export interface ExerciseDetails {
+  id: number;
+  name: string;
+  description: string;
+  muscle_group: string;
+  equipment_type: string;
+}
+
 // API service class
 class ApiService {
   private baseUrl: string;
@@ -296,6 +312,12 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(setData),
     });
+  }
+
+  async getExerciseProgress(exerciseId: number): Promise<{ exercise: ExerciseDetails; progress: ExerciseProgressPoint[] }> {
+    return await this.request<{ exercise: ExerciseDetails; progress: ExerciseProgressPoint[] }>(
+      `/workouts/exercise-progress/${exerciseId}`
+    );
   }
 
   // Social methods
