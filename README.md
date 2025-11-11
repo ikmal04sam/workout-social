@@ -14,7 +14,10 @@ A full-stack social fitness application that allows users to log workouts, track
 
 ### Mobile App (React Native/Expo)
 - **Cross-platform**: Works on both iOS and Android
-- **Tab Navigation**: Home, Discover, and Profile screens
+- **Tab Navigation**: Home, Progress, and Profile screens
+- **Discover & Follow**: Search for users, follow them, and view their workouts
+- **Progress Tracking**: Profile dashboard with weekly duration chart and exercise analytics
+- **Exercise Analytics**: Progress tab with muscle-group browsing and per-exercise history (heaviest weight, sessions, etc.)
 - **Authentication Flow**: Seamless login/register experience
 - **Real-time Updates**: Live feed of workouts from followed users
 
@@ -29,6 +32,7 @@ A full-stack social fitness application that allows users to log workouts, track
 ### Frontend (Mobile)
 - **React Native** with Expo
 - **React Navigation** for navigation
+- **React Native SVG** for custom progress charts
 - **TypeScript** for type safety
 - **AsyncStorage** for local data persistence
 
@@ -39,13 +43,6 @@ A full-stack social fitness application that allows users to log workouts, track
 - **bcrypt** for password hashing
 - **JWT** for authentication
 - **CORS** for cross-origin requests
-
-## 📱 Screenshots
-
-The app includes three main screens:
-- **Home**: Personal workout feed and recent activity
-- **Discover**: Explore workouts from other users
-- **Profile**: User profile and personal statistics
 
 ## 🚀 Getting Started
 
@@ -157,6 +154,7 @@ The application uses PostgreSQL with the following main tables:
 ### Exercises
 - `GET /api/exercises` - Get exercise library
 - `GET /api/exercises/:id` - Get specific exercise
+- `GET /api/workouts/exercise-progress/:exerciseId` - Get per-exercise progress metrics for the authenticated user
 
 ### Social Features
 - `GET /api/social/feed` - Get social feed
