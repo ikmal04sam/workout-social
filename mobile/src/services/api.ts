@@ -99,6 +99,9 @@ export interface ExerciseProgressPoint {
   workout_id: number;
   date: string;
   max_weight: number;
+  top_weight: number;
+  top_reps: number;
+  best_set_volume: number;
   total_reps: number;
   total_volume: number;
 }

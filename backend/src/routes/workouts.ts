@@ -453,14 +453,24 @@ router.get('/exercise-progress/:exerciseId', authenticateToken, async (req, res)
         SELECT 
           w.id as workout_id,
           w.date,
+          COALESCE(best_set.weight, 0) as top_weight,
+          COALESCE(best_set.reps, 0) as top_reps,
+          COALESCE(best_set.weight * best_set.reps, 0) as best_set_volume,
           MAX(COALESCE(s.weight, 0)) as max_weight,
           SUM(COALESCE(s.reps, 0)) as total_reps,
           SUM(COALESCE(s.weight, 0) * COALESCE(s.reps, 0)) as total_volume
         FROM workouts w
         JOIN workout_exercises we ON we.workout_id = w.id
+        LEFT JOIN LATERAL (
+          SELECT s2.weight, s2.reps
+          FROM sets s2
+          WHERE s2.workout_exercise_id = we.id
+          ORDER BY s2.weight DESC, s2.reps DESC
+          LIMIT 1
+        ) best_set ON true
         JOIN sets s ON s.workout_exercise_id = we.id
         WHERE w.user_id = $1 AND we.exercise_id = $2
-        GROUP BY w.id, w.date
+        GROUP BY w.id, w.date, best_set.weight, best_set.reps
         ORDER BY w.date
       `,
       [userId, exerciseId]
