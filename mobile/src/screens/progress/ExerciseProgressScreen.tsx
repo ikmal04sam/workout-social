@@ -542,7 +542,8 @@ const styles = StyleSheet.create({
   },
   chartWrapper: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    paddingHorizontal: 8,
   },
   chartLabels: {
     flexDirection: 'row',
@@ -582,14 +583,18 @@ const styles = StyleSheet.create({
   },
   chartTabs: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 8,
     marginTop: 4,
+    paddingHorizontal: 10,
   },
   chartTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center', 
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 14,
     backgroundColor: '#f0f3ff',
   },
   chartTabActive: {
