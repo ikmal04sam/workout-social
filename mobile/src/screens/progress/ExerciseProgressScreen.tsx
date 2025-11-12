@@ -176,6 +176,30 @@ export default function ExerciseProgressScreen() {
     : null;
   const lastSessionAgoText = getWeeksAgoText(lastSessionDate);
 
+  const summaryStats = useMemo(() => {
+    const totalSessions = sessionData.length;
+    return [
+      {
+        key: 'best',
+        label: metricConfig[activeMetric].bestLabel,
+        value: metricConfig[activeMetric].format(bestMetric),
+        helper: 'Personal best',
+      },
+      {
+        key: 'average',
+        label: metricConfig[activeMetric].averageLabel,
+        value: metricConfig[activeMetric].format(averageMetric),
+        helper: 'Across all sessions',
+      },
+      {
+        key: 'sessions',
+        label: 'Total Sessions',
+        value: totalSessions.toString(),
+        helper: totalSessions === 1 ? 'Session logged' : 'Sessions logged',
+      },
+    ];
+  }, [activeMetric, averageMetric, bestMetric, metricConfig, sessionData.length]);
+
   const weeklyChartData = useMemo(() => {
     const now = new Date();
     const currentWeekStart = getWeekStart(now);
@@ -413,23 +437,26 @@ export default function ExerciseProgressScreen() {
       ) : (
         <>
           <View style={styles.summaryCard}>
+            <View style={styles.summaryHeaderRow}>
+              <Text style={styles.summaryTitle}>Overview</Text>
+              <Text style={styles.summarySubtitle}>
+                Tracking {metricConfig[activeMetric].title.toLowerCase()}
+              </Text>
+            </View>
             <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>{metricConfig[activeMetric].bestLabel}</Text>
-                <Text style={styles.summaryValue}>
-                  {metricConfig[activeMetric].format(bestMetric)}
-                </Text>
-              </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>{metricConfig[activeMetric].averageLabel}</Text>
-                <Text style={styles.summaryValue}>
-                  {metricConfig[activeMetric].format(averageMetric)}
-                </Text>
-              </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Total Sessions</Text>
-                <Text style={styles.summaryValue}>{sessionData.length}</Text>
-              </View>
+              {summaryStats.map((stat, index) => (
+                <View
+                  key={stat.key}
+                  style={[
+                    styles.summaryItem,
+                    index < summaryStats.length - 1 && styles.summaryItemDivider,
+                  ]}
+                >
+                  <Text style={styles.summaryLabel}>{stat.label}</Text>
+                  <Text style={styles.summaryValue}>{stat.value}</Text>
+                  <Text style={styles.summaryHelper}>{stat.helper}</Text>
+                </View>
+              ))}
             </View>
           </View>
 
@@ -572,33 +599,63 @@ const styles = StyleSheet.create({
   summaryCard: {
     backgroundColor: 'white',
     borderRadius: 18,
-    padding: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     marginBottom: 20,
+    gap: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
   },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  summarySubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    backgroundColor: '#f7f8ff',
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#e4e7ff',
   },
   summaryItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  summaryItemDivider: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: '#e4e7ff',
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#7381a3',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   summaryValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#111827',
-    marginTop: 6,
+  },
+  summaryHelper: {
+    fontSize: 12,
+    color: '#94a3b8',
   },
   chartCard: {
     backgroundColor: 'white',
