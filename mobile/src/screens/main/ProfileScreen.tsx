@@ -80,7 +80,7 @@ const getWeeksAgoText = (date?: Date | null) => {
 };
 
 export default function ProfileScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { user, logout, isLoading: authLoading } = useAuth();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -322,7 +322,14 @@ export default function ProfileScreen() {
               <TouchableOpacity 
                 key={workout.id} 
                 style={styles.workoutCard}
-                onPress={() => navigation.navigate('WorkoutDetail' as never, { workoutId: workout.id } as never)}
+                onPress={() =>
+                  navigation.navigate(
+                    'WorkoutDetail' as never,
+                    {
+                      workoutId: workout.id,
+                    } as never
+                  )
+                }
               >
                 <View style={styles.workoutHeader}>
                   <Text style={styles.workoutTitle}>{workout.title}</Text>

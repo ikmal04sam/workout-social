@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { apiService, Workout } from '../../services/api';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 export default function MyWorkoutsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,9 +20,18 @@ export default function MyWorkoutsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadWorkouts();
-  }, [loadWorkouts]);
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkouts();
+    }, [loadWorkouts])
+  );
+
+  const handleWorkoutPress = useCallback(
+    (workoutId: number) => {
+      navigation.navigate('WorkoutDetail' as never, { workoutId } as never);
+    },
+    [navigation]
+  );
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -50,11 +59,7 @@ export default function MyWorkoutsScreen() {
           <TouchableOpacity
             key={workout.id}
             style={styles.workoutCard}
-            onPress={() =>
-              navigation.navigate('WorkoutDetail' as never, {
-                workoutId: workout.id,
-              } as never)
-            }
+            onPress={() => handleWorkoutPress(workout.id)}
           >
             <View style={styles.workoutHeader}>
               <Text style={styles.workoutTitle}>{workout.title}</Text>

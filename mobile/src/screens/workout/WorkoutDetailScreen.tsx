@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 type WorkoutDetailRouteParams = {
   WorkoutDetail: {
@@ -39,6 +40,7 @@ interface Set {
 
 interface WorkoutDetail {
   id: number;
+  user_id: number;
   title: string;
   date: string;
   duration?: number;
@@ -53,9 +55,11 @@ export default function WorkoutDetailScreen() {
   const navigation = useNavigation();
   const { workoutId } = route.params;
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadWorkout();
@@ -73,6 +77,37 @@ export default function WorkoutDetailScreen() {
       navigation.goBack();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!workout || isDeleting) return;
+    Alert.alert(
+      'Delete workout?',
+      'This workout and all of its exercises and sets will be permanently removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isDeleting ? 'Deleting...' : 'Delete',
+          style: 'destructive',
+          onPress: handleDelete,
+        },
+      ]
+    );
+  };
+
+  const handleDelete = async () => {
+    if (!workout) return;
+    try {
+      setIsDeleting(true);
+      await apiService.deleteWorkout(workout.id);
+      Alert.alert('Workout deleted', 'Your workout has been removed.');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      Alert.alert('Error', 'Failed to delete workout. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -111,7 +146,19 @@ export default function WorkoutDetailScreen() {
           <Text style={styles.headerButton}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Workout Details</Text>
-        <View style={styles.headerSpacer} />
+        {user?.id === workout.user_id ? (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={confirmDelete}
+            disabled={isDeleting}
+          >
+            <Text style={[styles.headerButton, styles.deleteButtonText]}>
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -250,6 +297,13 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 60,
+  },
+  deleteButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  deleteButtonText: {
+    color: '#d93025',
   },
   content: {
     flex: 1,
