@@ -57,6 +57,24 @@ const formatChartData = (progress: ExerciseProgressPoint[]) =>
     };
   });
 
+const getWeekStart = (date: Date) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay();
+  const diff = (day + 6) % 7; // Monday as the start of the week
+  start.setDate(start.getDate() - diff);
+  return start;
+};
+
+interface WeeklyChartPoint {
+  start: Date;
+  label: string;
+  heaviestWeight: number;
+  oneRepMax: number;
+  bestSetVolume: number;
+  hasData: boolean;
+}
+
 const getWeeksAgoText = (date?: Date | null) => {
   if (!date) return 'No workouts yet';
   const now = new Date();
@@ -103,7 +121,7 @@ export default function ExerciseProgressScreen() {
     loadProgress();
   }, [exerciseId]);
 
-  const chartData = useMemo(() => formatChartData(progress), [progress]);
+  const sessionData = useMemo(() => formatChartData(progress), [progress]);
 
   const metricConfig: Record<MetricKey, MetricConfig> = useMemo(
     () => ({
@@ -135,65 +153,134 @@ export default function ExerciseProgressScreen() {
     []
   );
 
-  const getMetricValue = (point: typeof chartData[number]) =>
+  const getMetricValue = (point: typeof sessionData[number]) =>
     metricConfig[activeMetric].value(point);
 
   const averageMetric = useMemo(() => {
-    if (!chartData.length) return 0;
-    const total = chartData.reduce((sum, point) => sum + getMetricValue(point), 0);
-    return total / chartData.length;
-  }, [chartData, activeMetric]);
+    if (!sessionData.length) return 0;
+    const total = sessionData.reduce((sum, point) => sum + getMetricValue(point), 0);
+    return total / sessionData.length;
+  }, [sessionData, activeMetric]);
 
   const bestMetric = useMemo(() => {
-    if (!chartData.length) return 0;
-    return chartData.reduce((max, point) => Math.max(max, getMetricValue(point)), 0);
-  }, [chartData, activeMetric]);
+    if (!sessionData.length) return 0;
+    return sessionData.reduce((max, point) => Math.max(max, getMetricValue(point)), 0);
+  }, [sessionData, activeMetric]);
 
-  const latestMetricValue = chartData.length
-    ? getMetricValue(chartData[chartData.length - 1])
+  const latestMetricValue = sessionData.length
+    ? getMetricValue(sessionData[sessionData.length - 1])
     : 0;
 
-  const lastSessionDate = chartData.length ? new Date(chartData[chartData.length - 1].date) : null;
+  const lastSessionDate = sessionData.length
+    ? new Date(sessionData[sessionData.length - 1].date)
+    : null;
   const lastSessionAgoText = getWeeksAgoText(lastSessionDate);
+
+  const weeklyChartData = useMemo(() => {
+    const now = new Date();
+    const currentWeekStart = getWeekStart(now);
+    const weeks: WeeklyChartPoint[] = [];
+    const keyToIndex = new Map<string, number>();
+
+    for (let i = 11; i >= 0; i--) {
+      const start = new Date(currentWeekStart);
+      start.setDate(start.getDate() - i * 7);
+      const key = start.toISOString();
+      keyToIndex.set(key, weeks.length);
+      weeks.push({
+        start,
+        label: start.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        }),
+        heaviestWeight: 0,
+        oneRepMax: 0,
+        bestSetVolume: 0,
+        hasData: false,
+      });
+    }
+
+    sessionData.forEach((point) => {
+      const workoutDate = new Date(point.date);
+      const weekStart = getWeekStart(workoutDate);
+      const key = weekStart.toISOString();
+      const index = keyToIndex.get(key);
+      if (index != null) {
+        const week = weeks[index];
+        week.heaviestWeight = Math.max(
+          week.heaviestWeight,
+          point.top_weight || point.max_weight || 0
+        );
+        week.oneRepMax = Math.max(week.oneRepMax, point.oneRepMax || 0);
+        week.bestSetVolume = Math.max(week.bestSetVolume, point.bestSetVolume || 0);
+        week.hasData = true;
+      }
+    });
+
+    return weeks;
+  }, [sessionData]);
+
+  const weeklyMetricValue = useMemo(() => {
+    return (week: WeeklyChartPoint) => {
+      switch (activeMetric) {
+        case 'heaviestWeight':
+          return week.heaviestWeight;
+        case 'oneRepMax':
+          return week.oneRepMax;
+        case 'bestSetVolume':
+          return week.bestSetVolume;
+        default:
+          return 0;
+      }
+    };
+  }, [activeMetric]);
 
   const chartWidth = Dimensions.get('window').width - CHART_PADDING * 2;
   const weightRange = useMemo(() => {
-    if (!chartData.length) return { min: 0, max: 0 };
-    let min = getMetricValue(chartData[0]);
-    let max = getMetricValue(chartData[0]);
-    chartData.forEach((point) => {
-      const value = getMetricValue(point);
+    if (!weeklyChartData.length) return { min: 0, max: 0 };
+    const valueGetter = weeklyMetricValue;
+    let min = valueGetter(weeklyChartData[0]);
+    let max = valueGetter(weeklyChartData[0]);
+
+    weeklyChartData.forEach((week) => {
+      const value = valueGetter(week);
       min = Math.min(min, value);
       max = Math.max(max, value);
     });
 
     if (min === max) {
-      min = Math.max(0, min - 10);
-      max = max + 10;
+      if (activeMetric === 'bestSetVolume') {
+        const padding = Math.max(10, min * 0.1);
+        min = Math.max(0, min - padding);
+        max = max + padding;
+      } else {
+        min = Math.max(0, min - 10);
+        max = max + 10;
+      }
     }
     return { min, max };
-  }, [chartData]);
+  }, [weeklyChartData, weeklyMetricValue, activeMetric]);
 
   const points = useMemo(() => {
-    if (chartData.length === 0) return '';
+    if (weeklyChartData.length === 0) return '';
 
     const range = weightRange.max - weightRange.min || 1;
 
-    return chartData
+    return weeklyChartData
       .map((point, index) => {
         const x =
-          chartData.length === 1
+          weeklyChartData.length === 1
             ? chartWidth / 2
-            : (index / (chartData.length - 1)) * chartWidth;
-        const normalized = (getMetricValue(point) - weightRange.min) / range;
+            : (index / (weeklyChartData.length - 1)) * chartWidth;
+        const normalized = (weeklyMetricValue(point) - weightRange.min) / range;
         const y = CHART_HEIGHT - 16 - normalized * (CHART_HEIGHT - 36);
         return `${x},${y}`;
       })
       .join(' ');
-  }, [chartData, chartWidth, weightRange, activeMetric]);
+  }, [weeklyChartData, weeklyMetricValue, chartWidth, weightRange]);
 
   const renderChart = () => {
-    if (chartData.length === 0) {
+    if (weeklyChartData.every((week) => !week.hasData)) {
       return (
         <View style={styles.emptyChart}>
           <Text style={styles.emptyChartTitle}>No workouts logged yet</Text>
@@ -230,9 +317,9 @@ export default function ExerciseProgressScreen() {
                     fill="#98a2b3"
                     fontSize="10"
                   >
-                    {activeMetric === 'bestSetVolume'
-                      ? `${Math.max(valueLabel, 0).toFixed(0)}`
-                      : `${Math.max(valueLabel, 0).toFixed(0)} lb`}
+                    {metricConfig[activeMetric].unitSuffix === 'lb·reps'
+                      ? `${Math.max(valueLabel, 0).toFixed(0)} ${metricConfig[activeMetric].unitSuffix}`
+                      : `${Math.max(valueLabel, 0).toFixed(0)} ${metricConfig[activeMetric].unitSuffix}`}
                   </SvgText>
                 ) : null}
               </>
@@ -252,20 +339,21 @@ export default function ExerciseProgressScreen() {
           )}
 
           {/* Points */}
-          {chartData.map((point, index) => {
+          {weeklyChartData.map((point, index) => {
             const x =
-              chartData.length === 1
+              weeklyChartData.length === 1
                 ? chartWidth / 2
-                : (index / (chartData.length - 1)) * chartWidth;
+                : (index / (weeklyChartData.length - 1)) * chartWidth;
             const normalized =
               weightRange.max === weightRange.min
                 ? 0
-                : (getMetricValue(point) - weightRange.min) /
+                : (weeklyMetricValue(point) - weightRange.min) /
                   (weightRange.max - weightRange.min);
             const y = CHART_HEIGHT - 16 - normalized * (CHART_HEIGHT - 36);
-            return (
+            const value = weeklyMetricValue(point);
+            return value > 0 ? (
               <Circle
-                key={`${point.workout_id}-${index}`}
+                key={`${point.start.toISOString()}-${index}`}
                 cx={x}
                 cy={y}
                 r={5}
@@ -273,14 +361,14 @@ export default function ExerciseProgressScreen() {
                 stroke="white"
                 strokeWidth={2}
               />
-            );
+            ) : null;
           })}
         </Svg>
 
         <View style={styles.chartLabels}>
-          {chartData.map((point, index) => (
-            <Text key={`${point.workout_id}-${index}`} style={styles.chartLabel}>
-              {index === 0 || index === chartData.length - 1 || index % 2 === 0
+          {weeklyChartData.map((point, index) => (
+            <Text key={point.start.toISOString()} style={styles.chartLabel}>
+              {index === 0 || index === weeklyChartData.length - 1 || index % 2 === 0
                 ? point.label
                 : ''}
             </Text>
@@ -340,7 +428,7 @@ export default function ExerciseProgressScreen() {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Total Sessions</Text>
-                <Text style={styles.summaryValue}>{chartData.length}</Text>
+                <Text style={styles.summaryValue}>{sessionData.length}</Text>
               </View>
             </View>
           </View>
