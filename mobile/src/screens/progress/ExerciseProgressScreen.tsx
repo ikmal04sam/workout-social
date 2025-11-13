@@ -178,24 +178,39 @@ export default function ExerciseProgressScreen() {
 
   const summaryStats = useMemo(() => {
     const totalSessions = sessionData.length;
+    const formatNumber = (value: number) =>
+      numberFormatter.format(Math.round(value));
+
     return [
       {
         key: 'best',
-        label: metricConfig[activeMetric].bestLabel,
-        value: metricConfig[activeMetric].format(bestMetric),
-        helper: 'Personal best',
+        label: activeMetric === 'bestSetVolume'
+          ? 'Best Volume'
+          : activeMetric === 'oneRepMax'
+            ? 'Best\n1RM'
+            : 'Best Weight',
+        value:
+          activeMetric === 'bestSetVolume'
+            ? formatNumber(bestMetric)
+            : metricConfig[activeMetric].format(bestMetric),
       },
       {
         key: 'average',
-        label: metricConfig[activeMetric].averageLabel,
-        value: metricConfig[activeMetric].format(averageMetric),
-        helper: 'Across all sessions',
+        label: activeMetric === 'bestSetVolume'
+          ? 'Average Volume'
+          : activeMetric === 'oneRepMax'
+            ? 'Average 1RM'
+            : 'Average Weight',
+        value:
+          activeMetric === 'bestSetVolume'
+            ? formatNumber(averageMetric)
+            : metricConfig[activeMetric].format(averageMetric),
       },
       {
         key: 'sessions',
         label: 'Total Sessions',
         value: totalSessions.toString(),
-        helper: totalSessions === 1 ? 'Session logged' : 'Sessions logged',
+        unit: undefined,
       },
     ];
   }, [activeMetric, averageMetric, bestMetric, metricConfig, sessionData.length]);
@@ -453,8 +468,14 @@ export default function ExerciseProgressScreen() {
                   ]}
                 >
                   <Text style={styles.summaryLabel}>{stat.label}</Text>
-                  <Text style={styles.summaryValue}>{stat.value}</Text>
-                  <Text style={styles.summaryHelper}>{stat.helper}</Text>
+                  <Text
+                    style={styles.summaryValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {stat.value}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -633,29 +654,33 @@ const styles = StyleSheet.create({
   },
   summaryItem: {
     flex: 1,
-    alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 14,
+    gap: 6,
+    minWidth: 0,
+    minHeight: 98,
   },
   summaryItemDivider: {
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: '#e4e7ff',
   },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#7381a3',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
+   summaryLabel: {
+     fontSize: 10.5,
+     color: '#7381a3',
+     textTransform: 'uppercase',
+     letterSpacing: 0.4,
+     textAlign: 'center',
+     lineHeight: 15,
+   },
   summaryValue: {
     fontSize: 22,
     fontWeight: '800',
     color: '#111827',
-  },
-  summaryHelper: {
-    fontSize: 12,
-    color: '#94a3b8',
+    textAlign: 'center',
+    lineHeight: 30,
   },
   chartCard: {
     backgroundColor: 'white',
