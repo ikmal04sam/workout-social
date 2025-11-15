@@ -5,6 +5,7 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type) VALUES
 ('Bench Press', 'Barbell chest press on bench', 'Chest', 'Barbell'),
 ('Incline Bench Press', 'Barbell chest press on inclined bench', 'Chest', 'Barbell'),
 ('Dumbbell Press', 'Dumbbell chest press', 'Chest', 'Dumbbell'),
+('Incline Dumbbell Press', 'Dumbbell chest press on inclined bench', 'Chest', 'Dumbbell'),
 ('Chest Flyes', 'Dumbbell chest flyes', 'Chest', 'Dumbbell'),
 
 -- Upper Body - Back
