@@ -17,6 +17,7 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type) VALUES
 
 -- Upper Body - Shoulders
 ('Overhead Press', 'Barbell overhead press', 'Shoulders', 'Barbell'),
+('Dumbbell Overhead Press', 'Dumbbell overhead press', 'Shoulders', 'Dumbbell'),
 ('Lateral Raises', 'Dumbbell lateral raises', 'Shoulders', 'Dumbbell'),
 ('Front Raises', 'Dumbbell front raises', 'Shoulders', 'Dumbbell'),
 ('Rear Delt Flyes', 'Rear deltoid flyes', 'Shoulders', 'Dumbbell'),
@@ -34,6 +35,8 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type) VALUES
 ('Romanian Deadlifts', 'Romanian deadlifts', 'Legs', 'Barbell'),
 ('Calf Raises', 'Standing calf raises', 'Legs', 'Bodyweight'),
 ('Leg Press', 'Machine leg press', 'Legs', 'Machine'),
+('Lying Hamstring Curl', 'Lying hamstring curl on machine', 'Legs', 'Machine'),
+('Leg Extensions', 'Leg extension on machine', 'Legs', 'Machine'),
 
 -- Core
 ('Plank', 'Isometric core exercise', 'Core', 'Bodyweight'),

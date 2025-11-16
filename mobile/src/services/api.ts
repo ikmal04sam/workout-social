@@ -309,11 +309,30 @@ class ApiService {
     });
   }
 
+  async removeExerciseFromWorkout(workoutId: number, exerciseId: number): Promise<{ message: string }> {
+    return await this.request<{ message: string }>(`/workouts/${workoutId}/exercises/${exerciseId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Set methods
   async addSetsToExercise(workoutExerciseId: number, setData: AddSetsToExerciseRequest): Promise<{ message: string; set: Set }> {
     return await this.request<{ message: string; set: Set }>(`/workouts/exercises/${workoutExerciseId}/sets`, {
       method: 'POST',
       body: JSON.stringify(setData),
+    });
+  }
+
+  async updateSet(setId: number, setData: { reps?: number; weight?: number; rest_time?: number; notes?: string }): Promise<{ message: string; set: Set }> {
+    return await this.request<{ message: string; set: Set }>(`/workouts/sets/${setId}`, {
+      method: 'PUT',
+      body: JSON.stringify(setData),
+    });
+  }
+
+  async deleteSet(setId: number): Promise<{ message: string }> {
+    return await this.request<{ message: string }>(`/workouts/sets/${setId}`, {
+      method: 'DELETE',
     });
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -61,11 +61,7 @@ export default function WorkoutDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    loadWorkout();
-  }, [workoutId]);
-
-  const loadWorkout = async () => {
+  const loadWorkout = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await apiService.getWorkout(workoutId);
@@ -78,7 +74,17 @@ export default function WorkoutDetailScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workoutId, navigation]);
+
+  useEffect(() => {
+    loadWorkout();
+  }, [loadWorkout]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkout();
+    }, [loadWorkout])
+  );
 
   const confirmDelete = () => {
     if (!workout || isDeleting) return;
@@ -147,15 +153,25 @@ export default function WorkoutDetailScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Workout Details</Text>
         {user?.id === workout.user_id ? (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={confirmDelete}
-            disabled={isDeleting}
-          >
-            <Text style={[styles.headerButton, styles.deleteButtonText]}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('EditWorkout' as never, { workoutId: workout.id } as never)}
+            >
+              <Text style={[styles.headerButton, styles.editButtonText]}>
+                Edit
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={confirmDelete}
+              disabled={isDeleting}
+            >
+              <Text style={[styles.headerButton, styles.deleteButtonText]}>
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <View style={styles.headerSpacer} />
         )}
@@ -297,6 +313,18 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 60,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  editButtonText: {
+    color: '#007AFF',
   },
   deleteButton: {
     paddingHorizontal: 10,

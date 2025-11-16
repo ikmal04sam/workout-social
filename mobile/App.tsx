@@ -9,6 +9,7 @@ import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
 import MainTabNavigator from './src/navigation/MainTabNavigator';
 import WorkoutDetailScreen from './src/screens/workout/WorkoutDetailScreen';
+import EditWorkoutScreen from './src/screens/workout/EditWorkoutScreen';
 import CommentsScreen from './src/screens/workout/CommentsScreen';
 import UserProfileScreen from './src/screens/user/UserProfileScreen';
 import EditProfileScreen from './src/screens/user/EditProfileScreen';
@@ -44,6 +45,11 @@ function AppNavigator() {
           <Stack.Screen 
             name="WorkoutDetail" 
             component={WorkoutDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditWorkout" 
+            component={EditWorkoutScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen 
