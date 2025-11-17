@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { apiService, Exercise } from '../../services/api';
 
 type GroupedExercises = Record<string, Exercise[]>;
@@ -67,15 +68,27 @@ export default function ProgressScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search exercises..."
-          placeholderTextColor="#9AA0B4"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+        <View style={styles.searchInputWrapper}>
+          <Ionicons name="search" size={18} color="#8E8E93" style={styles.searchInputIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search exercises..."
+            placeholderTextColor="#8E8E93"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              style={styles.clearButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={18} color="#8E8E93" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -131,21 +144,31 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingVertical: 12,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  searchInput: {
-    backgroundColor: '#f0f3ff',
-    borderRadius: 14,
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1f2937',
-    borderWidth: 1,
-    borderColor: '#dde2ff',
+    paddingVertical: 10,
+  },
+  searchInputIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 0,
+    fontSize: 17,
+    color: '#000',
+  },
+  clearButton: {
+    marginLeft: 8,
+    padding: 2,
   },
   loadingContainer: {
     flex: 1,
