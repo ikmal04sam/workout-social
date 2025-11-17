@@ -131,16 +131,25 @@ export default function DiscoverScreen() {
       {/* Search Input */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputWrapper}>
-          <Ionicons name="search" size={20} color="#007AFF" style={styles.searchInputIcon} />
+          <Ionicons name="search" size={18} color="#8E8E93" style={styles.searchInputIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search users by username..."
-            placeholderTextColor="#999"
+            placeholderTextColor="#8E8E93"
             value={searchQuery}
             onChangeText={handleSearchChange}
             autoCapitalize="none"
             autoCorrect={false}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => handleSearchChange('')}
+              style={styles.clearButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={18} color="#8E8E93" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -300,7 +309,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   searchContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -308,25 +318,23 @@ const styles = StyleSheet.create({
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    paddingHorizontal: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   searchInputIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
+    paddingVertical: 0,
+    fontSize: 17,
+    color: '#000',
+  },
+  clearButton: {
+    marginLeft: 8,
+    padding: 2,
   },
   loadingContainer: {
     flex: 1,
