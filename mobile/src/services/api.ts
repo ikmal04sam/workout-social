@@ -385,6 +385,10 @@ class ApiService {
     return await this.request<{ users: any[] }>(`/auth/search?q=${encodeURIComponent(query)}`);
   }
 
+  async getRecommendedUsers(): Promise<{ users: any[]; count: number }> {
+    return await this.request<{ users: any[]; count: number }>('/auth/recommended');
+  }
+
   async getUserProfile(userId: number): Promise<{ user: any }> {
     return await this.request<{ user: any }>(`/auth/user/${userId}`);
   }

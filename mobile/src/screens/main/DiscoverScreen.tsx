@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -29,8 +29,28 @@ export default function DiscoverScreen() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<SearchUser[]>([]);
+  const [recommendedUsers, setRecommendedUsers] = useState<SearchUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRecommended, setIsLoadingRecommended] = useState(false);
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+
+  const loadRecommendedUsers = useCallback(async () => {
+    try {
+      setIsLoadingRecommended(true);
+      const response = await apiService.getRecommendedUsers();
+      const formattedUsers = response.users.map((u: any) => ({
+        ...u,
+        follower_count: parseInt(u.follower_count) || 0,
+        following_count: parseInt(u.following_count) || 0,
+        is_following: false,
+      }));
+      setRecommendedUsers(formattedUsers);
+    } catch (error) {
+      console.error('Error loading recommended users:', error);
+    } finally {
+      setIsLoadingRecommended(false);
+    }
+  }, []);
 
   const searchUsers = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -56,6 +76,21 @@ export default function DiscoverScreen() {
     }
   }, []);
 
+  const handleFollow = async (userId: number) => {
+    try {
+      await apiService.followUser(userId);
+      // Update recommended users list
+      setRecommendedUsers(prev => prev.filter(u => u.id !== userId));
+      // Update search results if this user is in them
+      setUsers(prev => prev.map(u => 
+        u.id === userId ? { ...u, is_following: true } : u
+      ));
+    } catch (error) {
+      console.error('Error following user:', error);
+      Alert.alert('Error', 'Failed to follow user');
+    }
+  };
+
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
 
@@ -72,31 +107,41 @@ export default function DiscoverScreen() {
     setDebounceTimer(timer);
   };
 
-  // Clear search when screen loses focus
+  // Load recommended users when screen is focused
   useFocusEffect(
     useCallback(() => {
+      loadRecommendedUsers();
       return () => {
         if (debounceTimer) {
           clearTimeout(debounceTimer);
         }
       };
-    }, [debounceTimer])
+    }, [loadRecommendedUsers, debounceTimer])
   );
+
+  // Reload recommended users when search is cleared
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      loadRecommendedUsers();
+    }
+  }, [searchQuery, loadRecommendedUsers]);
 
   return (
     <View style={styles.container}>
-
       {/* Search Input */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search users by username..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+        <View style={styles.searchInputWrapper}>
+          <Ionicons name="search" size={20} color="#007AFF" style={styles.searchInputIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search users by username..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
       </View>
 
       {/* Results */}
@@ -106,13 +151,80 @@ export default function DiscoverScreen() {
           <Text style={styles.loadingText}>Searching...</Text>
         </View>
       ) : searchQuery.trim() === '' ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="search" size={48} color="#999" style={styles.emptyIcon} />
-          <Text style={styles.emptyText}>Search for users</Text>
-          <Text style={styles.emptySubtext}>
-            Enter a username to find and follow other users
-          </Text>
-        </View>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Recommended Users */}
+          {isLoadingRecommended ? (
+            <View style={styles.recommendedLoading}>
+              <ActivityIndicator size="small" color="#007AFF" />
+            </View>
+          ) : recommendedUsers.length > 0 ? (
+            <View style={styles.recommendedSection}>
+              <Text style={styles.recommendedTitle}>Recommended for you</Text>
+              {recommendedUsers.map((user) => {
+                const profileImageUri = user.profile_pic
+                  ? (user.profile_pic.startsWith?.('data:')
+                      ? user.profile_pic
+                      : `data:image/jpeg;base64,${user.profile_pic}`)
+                  : null;
+
+                return (
+                  <TouchableOpacity
+                    key={user.id}
+                    style={styles.userCard}
+                    onPress={() =>
+                      navigation.navigate('UserProfile' as never, {
+                        userId: user.id,
+                      } as never)
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.userInfo}>
+                      <View style={styles.userAvatar}>
+                        {profileImageUri ? (
+                          <Image source={{ uri: profileImageUri }} style={styles.userAvatarImage} />
+                        ) : (
+                          <Text style={styles.userAvatarText}>
+                            {user.username.charAt(0).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.userDetails}>
+                        <Text style={styles.username}>{user.username}</Text>
+                        {user.bio && (
+                          <Text style={styles.userBio} numberOfLines={1}>
+                            {user.bio}
+                          </Text>
+                        )}
+                        <View style={styles.userStats}>
+                          <Text style={styles.userStatText}>
+                            {user.follower_count} followers
+                          </Text>
+                          <Text style={styles.userStatText}> • </Text>
+                          <Text style={styles.userStatText}>
+                            {user.following_count} following
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.followButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleFollow(user.id);
+                        }}
+                      >
+                        <Text style={styles.followButtonText}>Follow</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
+        </ScrollView>
       ) : users.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No users found</Text>
@@ -193,14 +305,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  searchInput: {
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchInputIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
   },
   loadingContainer: {
     flex: 1,
@@ -213,25 +339,43 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
   },
+  recommendedSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  recommendedTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  recommendedLoading: {
+    padding: 40,
+    alignItems: 'center',
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
   },
-  emptyIcon: {
-    marginBottom: 16,
-  },
   emptyText: {
     fontSize: 18,
-    color: '#999',
+    color: '#333',
     marginBottom: 8,
     fontWeight: '600',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#ccc',
+    color: '#666',
     textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   content: {
     flex: 1,
@@ -302,6 +446,17 @@ const styles = StyleSheet.create({
   followingBadgeText: {
     fontSize: 12,
     color: '#007AFF',
+    fontWeight: '600',
+  },
+  followButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  followButtonText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

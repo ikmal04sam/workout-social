@@ -358,6 +358,43 @@ router.get('/following', authenticateToken, async (req, res) => {
   }
 });
 
+// Get recommended users (users not yet followed by current user)
+router.get('/recommended', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const { limit = 10 } = req.query;
+
+    const result = await pool.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.bio,
+        u.profile_pic,
+        u.created_at,
+        COUNT(DISTINCT f1.follower_id) as follower_count,
+        COUNT(DISTINCT f2.following_id) as following_count,
+        false as is_following
+      FROM users u
+      LEFT JOIN follows f1 ON f1.following_id = u.id
+      LEFT JOIN follows f2 ON f2.follower_id = u.id
+      LEFT JOIN follows f3 ON f3.follower_id = $1 AND f3.following_id = u.id
+      WHERE u.id != $1 AND f3.follower_id IS NULL
+      GROUP BY u.id, u.username, u.bio, u.profile_pic, u.created_at
+      ORDER BY COUNT(DISTINCT f1.follower_id) DESC, u.created_at DESC
+      LIMIT $2
+    `, [userId, parseInt(limit as string)]);
+
+    res.json({
+      users: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('Get recommended users error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get list of users who follow the current user
 router.get('/followers', authenticateToken, async (req, res) => {
   try {
