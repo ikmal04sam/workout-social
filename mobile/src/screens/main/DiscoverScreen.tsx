@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 
 interface SearchUser {
@@ -106,7 +107,7 @@ export default function DiscoverScreen() {
         </View>
       ) : searchQuery.trim() === '' ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔍</Text>
+          <Ionicons name="search" size={48} color="#999" style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Search for users</Text>
           <Text style={styles.emptySubtext}>
             Enter a username to find and follow other users
@@ -219,7 +220,6 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: 16,
   },
   emptyText: {

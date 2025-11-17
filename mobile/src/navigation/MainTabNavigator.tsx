@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from '../screens/main/HomeScreen';
 import DiscoverScreen from '../screens/main/DiscoverScreen';
@@ -21,7 +22,7 @@ function DiscoverHeaderButton() {
       onPress={() => navigation.navigate('Discover' as never)}
       activeOpacity={0.7}
     >
-      <Text style={headerStyles.searchIcon}>🔍</Text>
+      <Ionicons name="search" size={18} color="#007AFF" />
     </TouchableOpacity>
   );
 }
@@ -105,7 +106,7 @@ export default function MainTabNavigator() {
           },
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🏠</Text>
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
@@ -115,7 +116,7 @@ export default function MainTabNavigator() {
         options={{
           tabBarLabel: 'Discover',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🔍</Text>
+            <Ionicons name="search" size={size} color={color} />
           ),
         }}
       />
@@ -126,7 +127,7 @@ export default function MainTabNavigator() {
           tabBarLabel: '',
           tabBarIcon: () => (
             <View style={styles.recordFab} accessibilityLabel="Create workout">
-              <Text style={styles.recordIcon}>+</Text>
+              <Ionicons name="add" size={32} color="white" />
             </View>
           ),
         }}
@@ -137,7 +138,7 @@ export default function MainTabNavigator() {
         options={{
           tabBarLabel: 'Progress',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>📈</Text>
+            <Ionicons name="stats-chart" size={size} color={color} />
           ),
         }}
       />
@@ -147,7 +148,7 @@ export default function MainTabNavigator() {
         options={{
           tabBarLabel: 'You',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>📊</Text>
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
@@ -169,14 +170,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 6,
-  },
-  recordIcon: {
-    color: 'white',
-    fontSize: 45,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    lineHeight: 45,
-    includeFontPadding: false,
   },
 });
 
@@ -214,8 +207,5 @@ const headerStyles = StyleSheet.create({
     borderRadius: 18,
     marginBottom: 0,
     marginTop: -6,
-  },
-  searchIcon: {
-    fontSize: 18,
   },
 });

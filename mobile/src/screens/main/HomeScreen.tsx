@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 
 interface FeedWorkout {
@@ -313,12 +314,12 @@ export default function HomeScreen() {
                   }}
                   disabled={likingWorkoutId === workout.id}
                 >
-                  <Text style={[
-                    styles.actionIcon,
-                    workout.is_liked && styles.likedIcon
-                  ]}>
-                    {workout.is_liked ? '❤️' : '🤍'}
-                  </Text>
+                  <Ionicons 
+                    name={workout.is_liked ? "heart" : "heart-outline"} 
+                    size={20} 
+                    color={workout.is_liked ? "#FF3B30" : "#666"} 
+                    style={styles.actionIcon}
+                  />
                   <Text style={[
                     styles.actionText,
                     workout.is_liked && styles.likedText
@@ -337,7 +338,7 @@ export default function HomeScreen() {
                     } as never);
                   }}
                 >
-                  <Text style={styles.actionIcon}>💬</Text>
+                  <Ionicons name="chatbubble-outline" size={20} color="#666" style={styles.actionIcon} />
                   <Text style={styles.actionText}>{workout.comment_count}</Text>
                 </TouchableOpacity>
 
@@ -552,11 +553,7 @@ const styles = StyleSheet.create({
     marginRight: 20,
   },
   actionIcon: {
-    fontSize: 20,
     marginRight: 6,
-  },
-  likedIcon: {
-    // Heart emoji already red when liked
   },
   actionText: {
     fontSize: 14,
