@@ -10,10 +10,14 @@ interface ProfileStats {
   following_count: number;
 }
 
-interface WeeklyDuration {
+type MetricType = 'duration' | 'volume' | 'reps';
+
+interface WeeklyData {
   start: Date;
   end: Date;
   hours: number;
+  volume: number; // total volume in lb·reps
+  reps: number; // total reps
   label: string;
   monthLabel: string;
 }
@@ -29,10 +33,19 @@ const getWeekStart = (date: Date) => {
   return d;
 };
 
-const buildWeeklyDurationData = (workouts: Workout[]): WeeklyDuration[] => {
+interface WorkoutWithDetails extends Workout {
+  exercises?: Array<{
+    sets: Array<{
+      reps?: number;
+      weight?: number;
+    }>;
+  }>;
+}
+
+const buildWeeklyData = (workouts: WorkoutWithDetails[]): WeeklyData[] => {
   const now = new Date();
   const currentWeekStart = getWeekStart(now);
-  const weeks: WeeklyDuration[] = [];
+  const weeks: WeeklyData[] = [];
 
   for (let i = 11; i >= 0; i--) {
     const start = new Date(currentWeekStart);
@@ -43,6 +56,8 @@ const buildWeeklyDurationData = (workouts: Workout[]): WeeklyDuration[] => {
       start,
       end,
       hours: 0,
+      volume: 0,
+      reps: 0,
       label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       monthLabel: start.toLocaleDateString('en-US', { month: 'short' }),
     });
@@ -53,17 +68,46 @@ const buildWeeklyDurationData = (workouts: Workout[]): WeeklyDuration[] => {
   }
 
   workouts.forEach((workout) => {
-    if (!workout.date || workout.duration == null) return;
+    if (!workout.date) return;
     const workoutDate = new Date(workout.date);
     if (Number.isNaN(workoutDate.getTime())) return;
-    const durationMinutes = Number(workout.duration);
-    if (Number.isNaN(durationMinutes) || durationMinutes <= 0) return;
 
+    // Find the week this workout belongs to
+    let targetWeek: WeeklyData | null = null;
     for (const week of weeks) {
       if (workoutDate >= week.start && workoutDate < week.end) {
-        week.hours += durationMinutes / 60;
+        targetWeek = week;
         break;
       }
+    }
+
+    if (!targetWeek) return;
+
+    // Add duration
+    if (workout.duration != null) {
+      const durationMinutes = Number(workout.duration);
+      if (!Number.isNaN(durationMinutes) && durationMinutes > 0) {
+        targetWeek.hours += durationMinutes / 60;
+      }
+    }
+
+    // Calculate volume and reps from exercises and sets
+    if (workout.exercises && Array.isArray(workout.exercises)) {
+      workout.exercises.forEach((exercise) => {
+        if (exercise.sets && Array.isArray(exercise.sets)) {
+          exercise.sets.forEach((set) => {
+            const reps = Number(set.reps) || 0;
+            const weight = Number(set.weight) || 0;
+            
+            if (reps > 0) {
+              targetWeek!.reps += reps;
+              if (weight > 0) {
+                targetWeek!.volume += reps * weight;
+              }
+            }
+          });
+        }
+      });
     }
   });
 
@@ -83,6 +127,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { user, logout, isLoading: authLoading } = useAuth();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [workoutsWithDetails, setWorkoutsWithDetails] = useState<WorkoutWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [profileData, setProfileData] = useState<User | null>(null);
@@ -91,6 +136,7 @@ export default function ProfileScreen() {
     follower_count: 0,
     following_count: 0,
   });
+  const [selectedMetric, setSelectedMetric] = useState<MetricType>('duration');
 
   const loadWorkouts = useCallback(async () => {
     try {
@@ -102,6 +148,20 @@ export default function ProfileScreen() {
 
       const fetchedWorkouts = workoutsResponse.workouts || [];
       setWorkouts(fetchedWorkouts);
+
+      // Fetch full workout details to get exercises and sets for volume/reps calculation
+      const workoutsWithFullDetails = await Promise.all(
+        fetchedWorkouts.map(async (workout) => {
+          try {
+            const workoutDetail = await apiService.getWorkout(workout.id);
+            return workoutDetail.workout as WorkoutWithDetails;
+          } catch (error) {
+            console.error(`Error loading workout ${workout.id}:`, error);
+            return workout as WorkoutWithDetails;
+          }
+        })
+      );
+      setWorkoutsWithDetails(workoutsWithFullDetails);
 
       if (profileResponse?.user) {
         setProfileData(profileResponse.user);
@@ -174,13 +234,43 @@ export default function ProfileScreen() {
     following: profileStats.following_count ?? 0,
   };
 
-  const weeklyDurationData = useMemo(() => buildWeeklyDurationData(workouts), [workouts]);
-  const maxWeeklyHours = useMemo(
-    () => weeklyDurationData.reduce((max, week) => Math.max(max, week.hours), 0),
-    [weeklyDurationData]
+  const weeklyData = useMemo(() => buildWeeklyData(workoutsWithDetails), [workoutsWithDetails]);
+  
+  const getMetricValue = (week: WeeklyData, metric: MetricType): number => {
+    switch (metric) {
+      case 'duration':
+        return week.hours;
+      case 'volume':
+        return week.volume;
+      case 'reps':
+        return week.reps;
+      default:
+        return 0;
+    }
+  };
+
+  const maxMetricValue = useMemo(
+    () => weeklyData.reduce((max, week) => Math.max(max, getMetricValue(week, selectedMetric)), 0),
+    [weeklyData, selectedMetric]
   );
-  const latestWeekHours =
-    weeklyDurationData.length > 0 ? weeklyDurationData[weeklyDurationData.length - 1].hours : 0;
+
+  const latestWeekValue = useMemo(
+    () => weeklyData.length > 0 ? getMetricValue(weeklyData[weeklyData.length - 1], selectedMetric) : 0,
+    [weeklyData, selectedMetric]
+  );
+
+  const formatMetricValue = (value: number, metric: MetricType): string => {
+    switch (metric) {
+      case 'duration':
+        return `${value.toFixed(1)} hrs`;
+      case 'volume':
+        return `${Math.round(value).toLocaleString()} lb·reps`;
+      case 'reps':
+        return `${Math.round(value).toLocaleString()} reps`;
+      default:
+        return '0';
+    }
+  };
 
   const lastWorkoutDate = useMemo(() => {
     if (!workouts || workouts.length === 0) return null;
@@ -265,7 +355,7 @@ export default function ProfileScreen() {
         <View style={[styles.chartCard, styles.chartCardSpacing]}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartSummary}>
-              <Text style={styles.chartSummaryValue}>{latestWeekHours.toFixed(1)} hrs</Text>{' '}
+              <Text style={styles.chartSummaryValue}>{formatMetricValue(latestWeekValue, selectedMetric)}</Text>{' '}
               {lastWorkoutAgoText}
             </Text>
             <View style={styles.chartRange}>
@@ -275,9 +365,10 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.chart}>
-            {weeklyDurationData.map((week, index) => {
+            {weeklyData.map((week, index) => {
+              const metricValue = getMetricValue(week, selectedMetric);
               const barHeight =
-                maxWeeklyHours > 0 ? Math.max(6, (week.hours / maxWeeklyHours) * 140) : 6;
+                maxMetricValue > 0 ? Math.max(6, (metricValue / maxMetricValue) * 140) : 6;
               const showLabel = index % 3 === 0;
               return (
                 <View key={`${week.start.toISOString()}-${index}`} style={styles.chartBarWrapper}>
@@ -291,15 +382,30 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.chartTabs}>
-            <View style={[styles.chartTab, styles.chartTabActive]}>
-              <Text style={[styles.chartTabText, styles.chartTabTextActive]}>Duration</Text>
-            </View>
-            <View style={styles.chartTab}>
-              <Text style={styles.chartTabText}>Volume</Text>
-            </View>
-            <View style={styles.chartTab}>
-              <Text style={styles.chartTabText}>Reps</Text>
-            </View>
+            <TouchableOpacity
+              style={[styles.chartTab, selectedMetric === 'duration' && styles.chartTabActive]}
+              onPress={() => setSelectedMetric('duration')}
+            >
+              <Text style={[styles.chartTabText, selectedMetric === 'duration' && styles.chartTabTextActive]}>
+                Duration
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chartTab, selectedMetric === 'volume' && styles.chartTabActive]}
+              onPress={() => setSelectedMetric('volume')}
+            >
+              <Text style={[styles.chartTabText, selectedMetric === 'volume' && styles.chartTabTextActive]}>
+                Volume
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chartTab, selectedMetric === 'reps' && styles.chartTabActive]}
+              onPress={() => setSelectedMetric('reps')}
+            >
+              <Text style={[styles.chartTabText, selectedMetric === 'reps' && styles.chartTabTextActive]}>
+                Reps
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
