@@ -12,6 +12,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
+import DateDisplay from '../../components/DateDisplay';
 
 interface ExploreWorkout {
   id: number;
@@ -176,13 +177,7 @@ export default function ExploreScreen() {
               <Text style={styles.workoutTitle}>{workout.title}</Text>
 
               <View style={styles.workoutMeta}>
-                <Text style={styles.workoutDate}>
-                  {new Date(workout.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </Text>
+                <DateDisplay dateString={workout.date} />
                 {workout.duration && (
                   <Text style={styles.workoutMetaText}>
                     • {workout.duration} min

@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import DateDisplay from '../../components/DateDisplay';
 
 type WorkoutDetailRouteParams = {
   WorkoutDetail: {
@@ -117,14 +118,6 @@ export default function WorkoutDetailScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
 
   if (isLoading) {
     return (
@@ -189,7 +182,7 @@ export default function WorkoutDetailScreen() {
             </View>
           </View>
           
-          <Text style={styles.workoutDate}>{formatDate(workout.date)}</Text>
+          <DateDisplay dateString={workout.date} />
           
           {workout.duration && (
             <Text style={styles.workoutDetail}>

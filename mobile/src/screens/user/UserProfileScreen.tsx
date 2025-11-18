@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
 import { apiService, Workout } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import DateDisplay from '../../components/DateDisplay';
 
 type UserProfileRouteParams = {
   UserProfile: {
@@ -130,14 +131,6 @@ export default function UserProfileScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   const isOwnProfile = currentUser?.id === userId;
 
@@ -238,9 +231,10 @@ export default function UserProfileScreen() {
             </TouchableOpacity>
           )}
 
-          <Text style={styles.memberSince}>
-            Member since {formatDate(user.created_at)}
-          </Text>
+          <View style={styles.memberSinceContainer}>
+            <Text style={styles.memberSince}>Member since </Text>
+            <DateDisplay dateString={user.created_at} />
+          </View>
         </View>
 
         {/* Workouts Section */}
@@ -271,7 +265,7 @@ export default function UserProfileScreen() {
                 <View style={styles.workoutHeader}>
                   <Text style={styles.workoutTitle}>{workout.title}</Text>
                 </View>
-                <Text style={styles.workoutDate}>{formatDate(workout.date)}</Text>
+                <DateDisplay dateString={workout.date} />
                 {workout.duration && (
                   <Text style={styles.workoutDuration}>
                     Duration: {workout.duration} min
@@ -415,6 +409,11 @@ const styles = StyleSheet.create({
   },
   followingButtonText: {
     color: '#333',
+  },
+  memberSinceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   memberSince: {
     fontSize: 14,

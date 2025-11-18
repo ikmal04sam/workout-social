@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { apiService, Workout } from '../../services/api';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import DateDisplay from '../../components/DateDisplay';
 
 export default function MyWorkoutsScreen() {
   const navigation = useNavigation<any>();
@@ -33,14 +34,6 @@ export default function MyWorkoutsScreen() {
     [navigation]
   );
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -69,7 +62,7 @@ export default function MyWorkoutsScreen() {
                 </Text>
               </View>
             </View>
-            <Text style={styles.workoutMeta}>{formatDate(workout.date)}</Text>
+            <DateDisplay dateString={workout.date} />
             {workout.duration && (
               <Text style={styles.workoutMeta}>Duration: {workout.duration} min</Text>
             )}

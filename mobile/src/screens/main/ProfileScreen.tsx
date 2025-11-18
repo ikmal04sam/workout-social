@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { useAuth } from '../../contexts/AuthContext';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { apiService, Workout, User } from '../../services/api';
+import DateDisplay from '../../components/DateDisplay';
 
 interface ProfileStats {
   workout_count: number;
@@ -212,14 +213,6 @@ export default function ProfileScreen() {
     );
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
 
   const activeUser = profileData || user;
   const profilePicUri = activeUser?.profile_pic
@@ -445,7 +438,7 @@ export default function ProfileScreen() {
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.workoutDate}>{formatDate(workout.date)}</Text>
+                <DateDisplay dateString={workout.date} />
                 {workout.duration && (
                   <Text style={styles.workoutDuration}>Duration: {workout.duration} min</Text>
                 )}

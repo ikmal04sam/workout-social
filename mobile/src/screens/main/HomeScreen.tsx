@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { apiService } from '../../services/api';
+import DateDisplay from '../../components/DateDisplay';
 
 interface FeedWorkout {
   id: number;
@@ -281,13 +282,7 @@ export default function HomeScreen() {
 
               {/* Workout Details */}
               <View style={styles.workoutMeta}>
-                <Text style={styles.workoutDate}>
-                  {new Date(workout.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </Text>
+                <DateDisplay dateString={workout.date} />
                 {workout.duration && (
                   <Text style={styles.workoutMetaText}>
                     • {workout.duration} min

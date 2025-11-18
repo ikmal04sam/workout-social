@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,13 @@ import {
   ActivityIndicator,
   Switch,
   Animated,
+  PanResponder,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { apiService, Exercise } from '../../services/api';
 import ExerciseSearchModal from '../../components/ExerciseSearchModal';
@@ -48,6 +51,43 @@ export default function CreateWorkoutScreen() {
   const [isPublic, setIsPublic] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [sliderTrackWidth, setSliderTrackWidth] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const sliderTrackRef = useRef<View>(null);
+  const trackLayoutRef = useRef({ x: 0, width: 0 });
+
+  const updateDurationFromPosition = (x: number) => {
+    const { width } = trackLayoutRef.current;
+    if (width > 0) {
+      const percentage = Math.max(0, Math.min(1, x / width));
+      const newDuration = Math.round(percentage * 300);
+      setDuration(newDuration);
+    }
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (sliderTrackRef.current) {
+          sliderTrackRef.current.measure((x, y, width, height, pageX, pageY) => {
+            trackLayoutRef.current = { x: pageX, width };
+            const touchX = evt.nativeEvent.pageX - pageX;
+            updateDurationFromPosition(touchX);
+          });
+        }
+      },
+      onPanResponderMove: (evt) => {
+        const { x } = trackLayoutRef.current;
+        const touchX = evt.nativeEvent.pageX - x;
+        updateDurationFromPosition(touchX);
+      },
+      onPanResponderRelease: () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
+    })
+  ).current;
 
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
@@ -238,6 +278,79 @@ export default function CreateWorkoutScreen() {
     return exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
   };
 
+  const formatDateDisplay = (dateString: string) => {
+    const date = new Date(dateString + 'T12:00:00');
+    const today = new Date();
+    
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const dayAbbreviation = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const dayNumber = date.getDate().toString();
+    
+    return {
+      dayAbbreviation,
+      dayNumber,
+      isToday: dateOnly.getTime() === todayOnly.getTime(),
+    };
+  };
+
+  const handleDateChange = (daysOffset: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const currentDate = new Date(date + 'T12:00:00');
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + daysOffset);
+    
+    // Don't allow dates in the future
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (newDate > today) {
+      return;
+    }
+    
+    const dateString = newDate.toISOString().split('T')[0];
+    setDate(dateString);
+  };
+
+  const handleSetToday = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const today = new Date().toISOString().split('T')[0];
+    setDate(today);
+  };
+
+  const handleDatePickerChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (selectedDate > today) {
+        return;
+      }
+      const dateString = selectedDate.toISOString().split('T')[0];
+      setDate(dateString);
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
+    }
+  };
+
+  const isToday = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return date === today;
+  };
+
+  const isFutureDate = () => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const selectedDate = new Date(date + 'T12:00:00');
+    return selectedDate >= today;
+  };
+
+  const formattedDate = useMemo(() => formatDateDisplay(date), [date]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -329,13 +442,51 @@ export default function CreateWorkoutScreen() {
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>Date</Text>
-              <TextInput
-                style={styles.input}
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
-              />
+              <View style={styles.dateContainer}>
+                <TouchableOpacity
+                  style={styles.dateNavButton}
+                  onPress={() => handleDateChange(-1)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="chevron-back" size={16} color="#007AFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.dateDisplay}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowDatePicker(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.dateTextContainer}>
+                    <Text style={styles.dateDayAbbreviation}>
+                      {formattedDate.dayAbbreviation}
+                    </Text>
+                    <Text style={styles.dateDayNumber}>
+                      {formattedDate.dayNumber}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.dateNavButton,
+                    isFutureDate() && styles.dateNavButtonDisabled,
+                  ]}
+                  onPress={() => {
+                    if (!isFutureDate()) {
+                      handleDateChange(1);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                  disabled={isFutureDate()}
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={isFutureDate() ? '#d1d5db' : '#007AFF'}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>Duration (min)</Text>
@@ -344,7 +495,7 @@ export default function CreateWorkoutScreen() {
                   style={styles.durationButton}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setDuration(Math.max(0, duration - 5));
+                    setDuration(Math.max(0, duration - 1));
                   }}
                   activeOpacity={0.7}
                 >
@@ -358,7 +509,7 @@ export default function CreateWorkoutScreen() {
                   style={styles.durationButton}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setDuration(Math.min(300, duration + 5));
+                    setDuration(Math.min(300, duration + 1));
                   }}
                   activeOpacity={0.7}
                 >
@@ -366,21 +517,15 @@ export default function CreateWorkoutScreen() {
                 </TouchableOpacity>
               </View>
               <View style={styles.sliderContainer}>
-                <TouchableOpacity
+                <View
+                  ref={sliderTrackRef}
                   style={styles.sliderTrack}
-                  activeOpacity={1}
                   onLayout={(e) => {
-                    setSliderTrackWidth(e.nativeEvent.layout.width);
+                    const { width } = e.nativeEvent.layout;
+                    setSliderTrackWidth(width);
+                    trackLayoutRef.current.width = width;
                   }}
-                  onPress={(e) => {
-                    if (sliderTrackWidth > 0) {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      const tapX = e.nativeEvent.locationX;
-                      const percentage = Math.max(0, Math.min(1, tapX / sliderTrackWidth));
-                      const newDuration = Math.round(percentage * 300);
-                      setDuration(newDuration);
-                    }
-                  }}
+                  {...panResponder.panHandlers}
                 >
                   <View
                     style={[
@@ -394,7 +539,7 @@ export default function CreateWorkoutScreen() {
                       { left: `${(duration / 300) * 100}%` },
                     ]}
                   />
-                </TouchableOpacity>
+                </View>
                 <View style={styles.sliderLabels}>
                   <Text style={styles.sliderLabel}>0</Text>
                   <Text style={styles.sliderLabel}>300</Text>
@@ -572,6 +717,54 @@ export default function CreateWorkoutScreen() {
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Date Picker Modal */}
+      {Platform.OS === 'ios' ? (
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.datePickerModal}>
+            <View style={styles.datePickerModalContent}>
+              <View style={styles.datePickerModalHeader}>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.datePickerCancelButton}
+                >
+                  <Text style={styles.datePickerCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.datePickerModalTitle}>Select Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.datePickerConfirmButton}
+                >
+                  <Text style={styles.datePickerConfirmText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={new Date(date + 'T12:00:00')}
+                mode="date"
+                display="spinner"
+                onChange={handleDatePickerChange}
+                maximumDate={new Date()}
+                style={styles.datePicker}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : (
+        showDatePicker && (
+          <DateTimePicker
+            value={new Date(date + 'T12:00:00')}
+            mode="date"
+            display="default"
+            onChange={handleDatePickerChange}
+            maximumDate={new Date()}
+          />
+        )
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -947,6 +1140,114 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateNavButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  dateNavButtonDisabled: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
+  },
+  dateDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    gap: 4,
+    minHeight: 50,
+    width: 55,
+  },
+  dateTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: 2,
+  },
+  dateDayAbbreviation: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 2,
+    letterSpacing: 0.5,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  dateDayNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+    lineHeight: 26,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  todayButtonInline: {
+    padding: 4,
+    borderRadius: 6,
+    backgroundColor: '#eff6ff',
+  },
+  datePickerModal: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  datePickerModalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+  },
+  datePickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  datePickerCancelButton: {
+    padding: 4,
+  },
+  datePickerCancelText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+  datePickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  datePickerConfirmButton: {
+    padding: 4,
+  },
+  datePickerConfirmText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  datePicker: {
+    width: '100%',
+    height: 200,
   },
 });
 
