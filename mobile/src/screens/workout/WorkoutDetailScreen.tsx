@@ -182,7 +182,7 @@ export default function WorkoutDetailScreen() {
             </View>
           </View>
           
-          <DateDisplay dateString={workout.date} />
+          <DateDisplay dateString={workout.date} variant="list" />
           
           {workout.duration && (
             <Text style={styles.workoutDetail}>

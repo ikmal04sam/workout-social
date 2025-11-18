@@ -233,7 +233,7 @@ export default function UserProfileScreen() {
 
           <View style={styles.memberSinceContainer}>
             <Text style={styles.memberSince}>Member since </Text>
-            <DateDisplay dateString={user.created_at} />
+            <DateDisplay dateString={user.created_at} variant="list" />
           </View>
         </View>
 
@@ -265,7 +265,7 @@ export default function UserProfileScreen() {
                 <View style={styles.workoutHeader}>
                   <Text style={styles.workoutTitle}>{workout.title}</Text>
                 </View>
-                <DateDisplay dateString={workout.date} />
+                <DateDisplay dateString={workout.date} variant="list" />
                 {workout.duration && (
                   <Text style={styles.workoutDuration}>
                     Duration: {workout.duration} min

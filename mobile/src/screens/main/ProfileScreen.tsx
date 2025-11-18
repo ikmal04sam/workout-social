@@ -429,24 +429,33 @@ export default function ProfileScreen() {
                     } as never
                   )
                 }
+                activeOpacity={0.7}
               >
-                <View style={styles.workoutHeader}>
-                  <Text style={styles.workoutTitle}>{workout.title}</Text>
-                  <View style={styles.workoutBadge}>
-                    <Text style={styles.workoutBadgeText}>
-                      {workout.is_public ? 'Public' : 'Private'}
-                    </Text>
+                <View style={styles.workoutContent}>
+                  <View style={styles.workoutMain}>
+                    <View style={styles.workoutHeader}>
+                      <Text style={styles.workoutTitle} numberOfLines={1}>
+                        {workout.title}
+                      </Text>
+                      <View style={[styles.workoutBadge, workout.is_public ? styles.publicBadge : styles.privateBadge]}>
+                        <Text style={[styles.workoutBadgeText, workout.is_public ? styles.publicBadgeText : styles.privateBadgeText]}>
+                          {workout.is_public ? 'Public' : 'Private'}
+                        </Text>
+                      </View>
+                    </View>
+                    {workout.duration && (
+                      <Text style={styles.workoutDuration}>Duration: {workout.duration} min</Text>
+                    )}
+                    {workout.notes && (
+                      <Text style={styles.workoutNotes} numberOfLines={2}>
+                        {workout.notes}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.dateContainer}>
+                    <DateDisplay dateString={workout.date} variant="list" />
                   </View>
                 </View>
-                <DateDisplay dateString={workout.date} />
-                {workout.duration && (
-                  <Text style={styles.workoutDuration}>Duration: {workout.duration} min</Text>
-                )}
-                {workout.notes && (
-                  <Text style={styles.workoutNotes} numberOfLines={2}>
-                    {workout.notes}
-                  </Text>
-                )}
               </TouchableOpacity>
             ))
           )}
@@ -705,37 +714,65 @@ const styles = StyleSheet.create({
   workoutCard: {
     backgroundColor: 'white',
     padding: 16,
-    borderRadius: 10,
+    borderRadius: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  workoutContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  workoutMain: {
+    flex: 1,
+    marginRight: 16,
+    minWidth: 0,
   },
   workoutHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    gap: 8,
   },
   workoutTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#111827',
     flex: 1,
   },
   workoutBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
+    flexShrink: 0,
+  },
+  publicBadge: {
+    backgroundColor: '#E3F2FD',
+  },
+  privateBadge: {
+    backgroundColor: '#fdecea',
   },
   workoutBadgeText: {
-    fontSize: 12,
-    color: '#007AFF',
+    fontSize: 11,
     fontWeight: '600',
+  },
+  publicBadgeText: {
+    color: '#0A84FF',
+  },
+  privateBadgeText: {
+    color: '#d93025',
+  },
+  dateContainer: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexShrink: 0,
   },
   workoutDate: {
     fontSize: 14,
@@ -744,14 +781,15 @@ const styles = StyleSheet.create({
   },
   workoutDuration: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    color: '#6b7280',
+    marginBottom: 6,
+    fontWeight: '500',
   },
   workoutNotes: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 8,
-    fontStyle: 'italic',
+    color: '#6b7280',
+    marginTop: 4,
+    lineHeight: 20,
   },
   button: {
     backgroundColor: '#FF3B30',

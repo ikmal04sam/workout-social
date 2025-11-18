@@ -282,7 +282,7 @@ export default function HomeScreen() {
 
               {/* Workout Details */}
               <View style={styles.workoutMeta}>
-                <DateDisplay dateString={workout.date} />
+                <DateDisplay dateString={workout.date} variant="feed" />
                 {workout.duration && (
                   <Text style={styles.workoutMetaText}>
                     • {workout.duration} min

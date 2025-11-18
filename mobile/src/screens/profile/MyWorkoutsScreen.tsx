@@ -53,24 +53,33 @@ export default function MyWorkoutsScreen() {
             key={workout.id}
             style={styles.workoutCard}
             onPress={() => handleWorkoutPress(workout.id)}
+            activeOpacity={0.7}
           >
-            <View style={styles.workoutHeader}>
-              <Text style={styles.workoutTitle}>{workout.title}</Text>
-              <View style={[styles.badge, workout.is_public ? styles.publicBadge : styles.privateBadge]}>
-                <Text style={[styles.badgeText, workout.is_public ? styles.publicBadgeText : styles.privateBadgeText]}>
-                  {workout.is_public ? 'Public' : 'Private'}
-                </Text>
+            <View style={styles.workoutContent}>
+              <View style={styles.workoutMain}>
+                <View style={styles.workoutHeader}>
+                  <Text style={styles.workoutTitle} numberOfLines={1}>
+                    {workout.title}
+                  </Text>
+                  <View style={[styles.badge, workout.is_public ? styles.publicBadge : styles.privateBadge]}>
+                    <Text style={[styles.badgeText, workout.is_public ? styles.publicBadgeText : styles.privateBadgeText]}>
+                      {workout.is_public ? 'Public' : 'Private'}
+                    </Text>
+                  </View>
+                </View>
+                {workout.duration && (
+                  <Text style={styles.workoutMeta}>Duration: {workout.duration} min</Text>
+                )}
+                {workout.notes ? (
+                  <Text style={styles.workoutNotes} numberOfLines={2}>
+                    {workout.notes}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={styles.dateContainer}>
+                <DateDisplay dateString={workout.date} variant="list" />
               </View>
             </View>
-            <DateDisplay dateString={workout.date} />
-            {workout.duration && (
-              <Text style={styles.workoutMeta}>Duration: {workout.duration} min</Text>
-            )}
-            {workout.notes ? (
-              <Text style={styles.workoutNotes} numberOfLines={2}>
-                {workout.notes}
-              </Text>
-            ) : null}
           </TouchableOpacity>
         ))
       )}
@@ -113,30 +122,45 @@ const styles = StyleSheet.create({
   workoutCard: {
     backgroundColor: 'white',
     marginHorizontal: 16,
-    marginVertical: 10,
+    marginVertical: 8,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  workoutContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  workoutMain: {
+    flex: 1,
+    marginRight: 16,
+    minWidth: 0,
   },
   workoutHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    gap: 8,
   },
   workoutTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1,
   },
   badge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    flexShrink: 0,
   },
   publicBadge: {
     backgroundColor: '#E3F2FD',
@@ -145,7 +169,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fdecea',
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   publicBadgeText: {
@@ -154,15 +178,22 @@ const styles = StyleSheet.create({
   privateBadgeText: {
     color: '#d93025',
   },
+  dateContainer: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexShrink: 0,
+  },
   workoutMeta: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    color: '#6b7280',
+    marginBottom: 6,
+    fontWeight: '500',
   },
   workoutNotes: {
     fontSize: 14,
-    color: '#888',
-    marginTop: 6,
+    color: '#6b7280',
+    marginTop: 4,
+    lineHeight: 20,
   },
 });
 

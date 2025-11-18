@@ -177,7 +177,7 @@ export default function ExploreScreen() {
               <Text style={styles.workoutTitle}>{workout.title}</Text>
 
               <View style={styles.workoutMeta}>
-                <DateDisplay dateString={workout.date} />
+                <DateDisplay dateString={workout.date} variant="feed" />
                 {workout.duration && (
                   <Text style={styles.workoutMetaText}>
                     • {workout.duration} min
