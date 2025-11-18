@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -9,9 +9,11 @@ import {
   RefreshControl,
   Alert,
   Image,
+  Animated,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { apiService } from '../../services/api';
 
 interface FeedWorkout {
@@ -50,31 +52,39 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [likingWorkoutId, setLikingWorkoutId] = useState<number | null>(null);
+  const pulseAnimations = useRef<Record<number, Animated.Value>>({});
+  const [imageLoadingStates, setImageLoadingStates] = useState<Record<number, boolean>>({});
 
   const loadWorkouts = useCallback(async () => {
     try {
       const response = await apiService.getFeed();
       // Convert counts from strings to numbers and ensure is_liked is boolean
-      const formattedWorkouts = response.feed.map((w: any) => ({
-        ...w,
-        like_count: parseInt(w.like_count) || 0,
-        comment_count: parseInt(w.comment_count) || 0,
-        is_liked: w.is_liked === true || w.is_liked === 'true',
-        profile_pic: typeof w.profile_pic === 'string' && w.profile_pic.length > 0 ? w.profile_pic : null,
-        exercise_count: w.exercise_count !== undefined ? parseInt(w.exercise_count) || 0 : 0,
-        total_sets: w.total_sets !== undefined ? parseInt(w.total_sets) || 0 : 0,
-        total_volume: w.total_volume !== undefined ? parseInt(w.total_volume) || 0 : 0,
-        muscle_groups: Array.isArray(w.muscle_groups) ? w.muscle_groups : [],
-        exercise_previews: Array.isArray(w.exercise_previews)
-          ? w.exercise_previews.map((preview: any) => ({
-              name: preview?.name || 'Exercise',
-              set_count: parseInt(preview?.set_count) || 0,
-              total_reps: parseInt(preview?.total_reps) || 0,
-              top_weight: parseFloat(preview?.top_weight) || 0,
-              total_volume: parseFloat(preview?.total_volume) || 0,
-            }))
-          : [],
-      }));
+      const formattedWorkouts = response.feed.map((w: any) => {
+        // Initialize pulse animation for each workout
+        if (!pulseAnimations.current[w.id]) {
+          pulseAnimations.current[w.id] = new Animated.Value(1);
+        }
+        return {
+          ...w,
+          like_count: parseInt(w.like_count) || 0,
+          comment_count: parseInt(w.comment_count) || 0,
+          is_liked: w.is_liked === true || w.is_liked === 'true',
+          profile_pic: typeof w.profile_pic === 'string' && w.profile_pic.length > 0 ? w.profile_pic : null,
+          exercise_count: w.exercise_count !== undefined ? parseInt(w.exercise_count) || 0 : 0,
+          total_sets: w.total_sets !== undefined ? parseInt(w.total_sets) || 0 : 0,
+          total_volume: w.total_volume !== undefined ? parseInt(w.total_volume) || 0 : 0,
+          muscle_groups: Array.isArray(w.muscle_groups) ? w.muscle_groups : [],
+          exercise_previews: Array.isArray(w.exercise_previews)
+            ? w.exercise_previews.map((preview: any) => ({
+                name: preview?.name || 'Exercise',
+                set_count: parseInt(preview?.set_count) || 0,
+                total_reps: parseInt(preview?.total_reps) || 0,
+                top_weight: parseFloat(preview?.top_weight) || 0,
+                total_volume: parseFloat(preview?.total_volume) || 0,
+              }))
+            : [],
+        };
+      });
       setWorkouts(formattedWorkouts);
     } catch (error) {
       console.error('Error loading feed:', error);
@@ -97,14 +107,46 @@ export default function HomeScreen() {
     loadWorkouts();
   };
 
+  const triggerPulseAnimation = (workoutId: number) => {
+    if (!pulseAnimations.current[workoutId]) {
+      pulseAnimations.current[workoutId] = new Animated.Value(1);
+    }
+    
+    const pulseAnim = pulseAnimations.current[workoutId];
+    
+    Animated.sequence([
+      Animated.timing(pulseAnim, {
+        toValue: 1.2,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const handleImageLoadStart = (userId: number) => {
+    setImageLoadingStates(prev => ({ ...prev, [userId]: true }));
+  };
+
+  const handleImageLoadEnd = (userId: number) => {
+    setImageLoadingStates(prev => ({ ...prev, [userId]: false }));
+  };
+
   const handleLike = async (workoutId: number, isLiked: boolean) => {
     if (likingWorkoutId) return; // Prevent multiple rapid clicks
+    
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
     setLikingWorkoutId(workoutId);
     try {
       if (isLiked) {
         await apiService.unlikeWorkout(workoutId);
-        // Update local state optimistically
+        // Update local state optimistically with smooth animation
         setWorkouts(prev => prev.map(w => 
           w.id === workoutId 
             ? { ...w, is_liked: false, like_count: Math.max(0, w.like_count - 1) }
@@ -112,7 +154,9 @@ export default function HomeScreen() {
         ));
       } else {
         await apiService.likeWorkout(workoutId);
-        // Update local state optimistically
+        // Trigger pulse animation
+        triggerPulseAnimation(workoutId);
+        // Update local state optimistically with smooth animation
         setWorkouts(prev => prev.map(w => 
           w.id === workoutId 
             ? { ...w, is_liked: true, like_count: w.like_count + 1 }
@@ -126,6 +170,15 @@ export default function HomeScreen() {
     } finally {
       setLikingWorkoutId(null);
     }
+  };
+
+  const handleCommentPress = (workoutId: number, workoutTitle: string) => {
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('Comments' as never, { 
+      workoutId,
+      workoutTitle 
+    } as never);
   };
 
   const formatDate = (dateString: string) => {
@@ -185,13 +238,17 @@ export default function HomeScreen() {
         </View>
       ) : (
         <View style={styles.content}>
-          {workouts.map((workout) => {
+          {workouts.map((workout, index) => {
             const profileImageUri = getProfileImageUri(workout.profile_pic);
 
             return (
               <TouchableOpacity
               key={workout.id}
-              style={styles.workoutCard}
+              style={[
+                styles.workoutCard,
+                index % 2 === 1 && styles.workoutCardAlternate,
+                workout.is_liked && styles.workoutCardLiked
+              ]}
               onPress={() => navigation.navigate('WorkoutDetail' as never, { workoutId: workout.id } as never)}
               activeOpacity={0.7}
             >
@@ -207,7 +264,22 @@ export default function HomeScreen() {
                   }}
                 >
                   {profileImageUri ? (
-                    <Image source={{ uri: profileImageUri }} style={styles.userAvatarImage} />
+                    <View style={styles.userAvatarContainer}>
+                      <Image 
+                        source={{ uri: profileImageUri }} 
+                        style={styles.userAvatarImage}
+                        onLoadStart={() => handleImageLoadStart(workout.user_id)}
+                        onLoadEnd={() => handleImageLoadEnd(workout.user_id)}
+                        onError={() => handleImageLoadEnd(workout.user_id)}
+                      />
+                      {imageLoadingStates[workout.user_id] === true && (
+                        <View style={styles.userAvatarPlaceholder}>
+                          <Text style={styles.userAvatarPlaceholderText}>
+                            {workout.username.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   ) : (
                     <Text style={styles.userAvatarText}>
                       {workout.username.charAt(0).toUpperCase()}
@@ -302,18 +374,56 @@ export default function HomeScreen() {
               {/* Exercise Preview List */}
               {workout.exercise_previews && workout.exercise_previews.length > 0 && (
                 <View style={styles.exercisePreviewContainer}>
-                  {workout.exercise_previews.map((exercise, index) => (
-                    <View key={`${workout.id}-exercise-${index}`} style={styles.exercisePreviewRow}>
-                      <View style={styles.exercisePreviewHeader}>
-                        <Text style={styles.exercisePreviewName}>{exercise.name}</Text>
-                        <Text style={styles.exercisePreviewSets}>{exercise.set_count} sets</Text>
+                  {workout.exercise_previews.map((exercise, index) => {
+                    const isEvenRow = index % 2 === 0;
+                    const hasHighWeight = exercise.top_weight > 0;
+                    const hasHighReps = exercise.total_reps > 50;
+                    
+                    return (
+                      <View 
+                        key={`${workout.id}-exercise-${index}`} 
+                        style={[
+                          styles.exercisePreviewRow,
+                          isEvenRow && styles.exercisePreviewRowEven
+                        ]}
+                      >
+                        <Ionicons name="barbell" size={14} color="#5a6bff" style={styles.exerciseIcon} />
+                        <View style={styles.exercisePreviewContent}>
+                          <View style={styles.exercisePreviewHeader}>
+                            <View style={styles.exerciseNameContainer}>
+                              <Text style={styles.exercisePreviewName}>{exercise.name}</Text>
+                              {hasHighWeight && (
+                                <View style={styles.prBadge}>
+                                  <Text style={styles.prBadgeText}>PR</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={styles.exercisePreviewSets}>{exercise.set_count} sets</Text>
+                          </View>
+                          <View style={styles.exercisePreviewMeta}>
+                            {exercise.total_reps > 0 ? (
+                              <Text style={[
+                                styles.exercisePreviewMetaText,
+                                hasHighReps && styles.exercisePreviewMetaBlue
+                              ]}>
+                                {exercise.total_reps} reps
+                              </Text>
+                            ) : (
+                              <Text style={styles.exercisePreviewMetaText}>—</Text>
+                            )}
+                            {exercise.top_weight > 0 && (
+                              <Text style={[
+                                styles.exercisePreviewMetaText,
+                                styles.exercisePreviewMetaGreen
+                              ]}>
+                                {' • '}Top {formatWeight(exercise.top_weight)}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
                       </View>
-                      <Text style={styles.exercisePreviewMeta}>
-                        {exercise.total_reps > 0 ? `${exercise.total_reps} reps` : '—'}
-                        {exercise.top_weight > 0 ? ` • Top ${formatWeight(exercise.top_weight)}` : ''}
-                      </Text>
-                    </View>
-                  ))}
+                    );
+                  })}
                   {workout.exercise_count && workout.exercise_count > 3 && (
                     <Text style={styles.exercisePreviewMore}>
                       +{workout.exercise_count - 3} more exercises
@@ -331,33 +441,59 @@ export default function HomeScreen() {
                     handleLike(workout.id, workout.is_liked || false);
                   }}
                   disabled={likingWorkoutId === workout.id}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons 
-                    name={workout.is_liked ? "heart" : "heart-outline"} 
-                    size={20} 
-                    color={workout.is_liked ? "#FF3B30" : "#666"} 
-                    style={styles.actionIcon}
-                  />
-                  <Text style={[
-                    styles.actionText,
-                    workout.is_liked && styles.likedText
-                  ]}>
-                    {workout.like_count}
-                  </Text>
+                  <Animated.View
+                    style={[
+                      styles.actionButtonContent,
+                      {
+                        transform: [
+                          {
+                            scale: pulseAnimations.current[workout.id] || new Animated.Value(1),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Ionicons 
+                      name={workout.is_liked ? "heart" : "heart-outline"} 
+                      size={20} 
+                      color={workout.is_liked ? "#FF3B30" : "#666"} 
+                      style={styles.actionIcon}
+                    />
+                    <Text style={[
+                      styles.actionText,
+                      workout.is_liked && styles.likedText
+                    ]}>
+                      {workout.like_count}
+                    </Text>
+                  </Animated.View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={(e) => {
                     e.stopPropagation();
-                    navigation.navigate('Comments' as never, { 
-                      workoutId: workout.id,
-                      workoutTitle: workout.title 
-                    } as never);
+                    handleCommentPress(workout.id, workout.title);
                   }}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons name="chatbubble-outline" size={20} color="#666" style={styles.actionIcon} />
-                  <Text style={styles.actionText}>{workout.comment_count}</Text>
+                  <View style={styles.actionButtonContent}>
+                    <Ionicons name="chatbubble-outline" size={20} color="#666" style={styles.actionIcon} />
+                    <Text style={styles.actionText}>{workout.comment_count}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    // Share functionality can be added here
+                    Alert.alert('Share', 'Share functionality coming soon!');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="share-outline" size={20} color="#666" style={styles.actionIcon} />
                 </TouchableOpacity>
 
                 <View style={styles.actionSpacer} />
@@ -418,12 +554,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  workoutCardAlternate: {
+    backgroundColor: '#fafafa',
+  },
+  workoutCardLiked: {
+    borderColor: '#FFE5E5',
+    shadowColor: '#FF3B30',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
   userInfo: {
     flexDirection: 'row',
@@ -438,6 +587,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  userAvatarContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  userAvatarPlaceholder: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  userAvatarPlaceholderText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   userAvatarText: {
     color: 'white',
@@ -463,7 +632,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   workoutTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
@@ -476,17 +645,20 @@ const styles = StyleSheet.create({
   workoutDate: {
     fontSize: 14,
     color: '#666',
+    fontWeight: '400',
   },
   workoutMetaText: {
     fontSize: 14,
     color: '#666',
     marginLeft: 4,
+    fontWeight: '400',
   },
   workoutNotes: {
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
     marginBottom: 12,
+    fontWeight: '300',
   },
   chipGrid: {
     flexDirection: 'row',
@@ -534,24 +706,56 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eef0f5',
     borderRadius: 12,
-    padding: 12,
+    padding: 8,
     backgroundColor: '#fafbff',
     marginBottom: 12,
   },
   exercisePreviewRow: {
-    marginBottom: 10,
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  exercisePreviewRowEven: {
+    backgroundColor: '#f5f7ff',
+  },
+  exerciseIcon: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  exercisePreviewContent: {
+    flex: 1,
   },
   exercisePreviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
+  },
+  exerciseNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   exercisePreviewName: {
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
-    flex: 1,
-    marginRight: 8,
+    marginRight: 6,
+  },
+  prBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  prBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.3,
   },
   exercisePreviewSets: {
     fontSize: 13,
@@ -559,9 +763,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   exercisePreviewMeta: {
-    marginTop: 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  exercisePreviewMetaText: {
     fontSize: 13,
     color: '#667085',
+  },
+  exercisePreviewMetaBlue: {
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+  exercisePreviewMetaGreen: {
+    color: '#10b981',
+    fontWeight: '600',
   },
   exercisePreviewMore: {
     marginTop: 4,
@@ -577,9 +792,22 @@ const styles = StyleSheet.create({
     borderTopColor: '#f0f0f0',
   },
   actionButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  actionButtonPressed: {
+    backgroundColor: '#f0f0f0',
+  },
+  actionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
   },
   actionIcon: {
     marginRight: 6,
