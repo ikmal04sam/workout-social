@@ -248,30 +248,48 @@ export default function HomeScreen() {
               </View>
 
               {/* Workout Summary Chips */}
-              <View style={styles.chipRow}>
+              <View style={styles.chipGrid}>
                 <View style={styles.chip}>
-                  <Text style={styles.chipLabel}>Exercises</Text>
-                  <Text style={styles.chipValue}>{workout.exercise_count || 0}</Text>
+                  <Ionicons name="barbell-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                  <View style={styles.chipTextContainer}>
+                    <Text style={styles.chipLabel}>Exercises</Text>
+                    <Text style={styles.chipValue}>{workout.exercise_count || 0}</Text>
+                  </View>
                 </View>
                 <View style={styles.chip}>
-                  <Text style={styles.chipLabel}>Sets</Text>
-                  <Text style={styles.chipValue}>{workout.total_sets || 0}</Text>
+                  <Ionicons name="repeat-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                  <View style={styles.chipTextContainer}>
+                    <Text style={styles.chipLabel}>Sets</Text>
+                    <Text style={styles.chipValue}>{workout.total_sets || 0}</Text>
+                  </View>
                 </View>
                 {workout.total_volume ? (
                   <View style={styles.chip}>
-                    <Text style={styles.chipLabel}>Volume</Text>
-                    <Text style={styles.chipValue}>{Math.round(workout.total_volume)} lb</Text>
+                    <Ionicons name="stats-chart-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                    <View style={styles.chipTextContainer}>
+                      <Text style={styles.chipLabel}>Volume</Text>
+                      <Text style={styles.chipValue}>
+                        {Math.round(workout.total_volume)} lb
+                      </Text>
+                    </View>
                   </View>
-                ) : null}
+                ) : (
+                  <View style={styles.chipPlaceholder} />
+                )}
                 {(workout.muscle_groups && workout.muscle_groups.length > 0) ? (
-                  <View style={[styles.chip, styles.muscleChip]}>
-                    <Text style={styles.chipLabel}>Muscles</Text>
-                    <Text style={styles.chipValue} numberOfLines={1}>
-                      {workout.muscle_groups.slice(0, 2).join(', ')}
-                      {workout.muscle_groups.length > 2 ? ' +' : ''}
-                    </Text>
+                  <View style={styles.chip}>
+                    <Ionicons name="fitness-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                    <View style={styles.chipTextContainer}>
+                      <Text style={styles.chipLabel}>Muscles</Text>
+                      <Text style={styles.chipValue} numberOfLines={1}>
+                        {workout.muscle_groups.slice(0, 2).join(', ')}
+                        {workout.muscle_groups.length > 2 ? ' +' : ''}
+                      </Text>
+                    </View>
                   </View>
-                ) : null}
+                ) : (
+                  <View style={styles.chipPlaceholder} />
+                )}
               </View>
 
               {/* Workout Notes Preview */}
@@ -470,36 +488,47 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
-  chipRow: {
+  chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 12,
-    marginHorizontal: -4,
+    marginHorizontal: -6,
   },
   chip: {
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: '#f1f4ff',
-    minWidth: 80,
-    marginHorizontal: 4,
-    marginBottom: 8,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    width: '48%',
+    marginHorizontal: '1%',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
-  muscleChip: {
-    flexShrink: 1,
-    maxWidth: '60%',
+  chipPlaceholder: {
+    width: '48%',
+    marginHorizontal: '1%',
+  },
+  chipIcon: {
+    marginRight: 8,
+  },
+  chipTextContainer: {
+    flex: 1,
   },
   chipLabel: {
-    fontSize: 11,
+    fontSize: 10,
     textTransform: 'uppercase',
-    color: '#5a6bff',
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    color: '#6b7280',
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    marginBottom: 2,
   },
   chipValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2a62',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1a1a1a',
   },
   exercisePreviewContainer: {
     borderWidth: 1,
