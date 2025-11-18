@@ -124,6 +124,7 @@ export default function MainTabNavigator() {
         name="Record" 
         component={CreateWorkoutScreen}
         options={{
+          headerShown: false,
           tabBarLabel: '',
           tabBarIcon: () => (
             <View style={styles.recordFab} accessibilityLabel="Create workout">

@@ -53,7 +53,6 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [likingWorkoutId, setLikingWorkoutId] = useState<number | null>(null);
   const pulseAnimations = useRef<Record<number, Animated.Value>>({});
-  const [imageLoadingStates, setImageLoadingStates] = useState<Record<number, boolean>>({});
 
   const loadWorkouts = useCallback(async () => {
     try {
@@ -126,14 +125,6 @@ export default function HomeScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  };
-
-  const handleImageLoadStart = (userId: number) => {
-    setImageLoadingStates(prev => ({ ...prev, [userId]: true }));
-  };
-
-  const handleImageLoadEnd = (userId: number) => {
-    setImageLoadingStates(prev => ({ ...prev, [userId]: false }));
   };
 
   const handleLike = async (workoutId: number, isLiked: boolean) => {
@@ -264,22 +255,7 @@ export default function HomeScreen() {
                   }}
                 >
                   {profileImageUri ? (
-                    <View style={styles.userAvatarContainer}>
-                      <Image 
-                        source={{ uri: profileImageUri }} 
-                        style={styles.userAvatarImage}
-                        onLoadStart={() => handleImageLoadStart(workout.user_id)}
-                        onLoadEnd={() => handleImageLoadEnd(workout.user_id)}
-                        onError={() => handleImageLoadEnd(workout.user_id)}
-                      />
-                      {imageLoadingStates[workout.user_id] === true && (
-                        <View style={styles.userAvatarPlaceholder}>
-                          <Text style={styles.userAvatarPlaceholderText}>
-                            {workout.username.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
+                    <Image source={{ uri: profileImageUri }} style={styles.userAvatarImage} />
                   ) : (
                     <Text style={styles.userAvatarText}>
                       {workout.username.charAt(0).toUpperCase()}
@@ -587,26 +563,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    overflow: 'hidden',
-  },
-  userAvatarContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  userAvatarPlaceholder: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  userAvatarPlaceholderText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   userAvatarText: {
     color: 'white',
