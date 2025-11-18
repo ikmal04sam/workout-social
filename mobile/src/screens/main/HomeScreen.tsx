@@ -239,7 +239,6 @@ export default function HomeScreen() {
               style={[
                 styles.workoutCard,
                 index % 2 === 1 && styles.workoutCardAlternate,
-                workout.is_liked && styles.workoutCardLiked
               ]}
               onPress={() => navigation.navigate('WorkoutDetail' as never, { workoutId: workout.id } as never)}
               activeOpacity={0.7}
@@ -526,10 +525,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: '#e5e7eb',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
     elevation: 3,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -538,12 +537,6 @@ const styles = StyleSheet.create({
   },
   workoutCardAlternate: {
     backgroundColor: '#fafafa',
-  },
-  workoutCardLiked: {
-    borderColor: '#FFE5E5',
-    shadowColor: '#FF3B30',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
   },
   userInfo: {
     flexDirection: 'row',
