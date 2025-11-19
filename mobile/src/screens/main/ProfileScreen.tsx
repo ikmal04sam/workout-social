@@ -36,6 +36,9 @@ const getWeekStart = (date: Date) => {
 
 interface WorkoutWithDetails extends Workout {
   exercises?: Array<{
+    exercise_name?: string;
+    name?: string;
+    muscle_group?: string;
     sets: Array<{
       reps?: number;
       weight?: number;
@@ -200,34 +203,69 @@ export default function ProfileScreen() {
     loadWorkouts();
   };
 
+  const handleWorkoutPressIn = (workoutId: number) => {
+    if (!workoutAnimatedValues.current[workoutId]) {
+      workoutAnimatedValues.current[workoutId] = new Animated.Value(1);
+    }
+    Animated.spring(workoutAnimatedValues.current[workoutId], {
+      toValue: 0.98,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleWorkoutPressOut = (workoutId: number) => {
+    if (!workoutAnimatedValues.current[workoutId]) {
+      workoutAnimatedValues.current[workoutId] = new Animated.Value(1);
+    }
+    Animated.spring(workoutAnimatedValues.current[workoutId], {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleStatPress = (statType: 'workouts' | 'followers' | 'following') => {
+    // Add press animation
+    Animated.sequence([
+      Animated.spring(animatedValues.current[statType], {
+        toValue: 0.95,
+        useNativeDriver: true,
+      }),
+      Animated.spring(animatedValues.current[statType], {
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Navigate based on stat type
+    if (statType === 'workouts') {
+      navigation.navigate('MyWorkoutsList' as never);
+    } else if (statType === 'followers') {
+      navigation.navigate('Followers' as never);
+    } else if (statType === 'following') {
+      navigation.navigate('Following' as never);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: logout
+        }
+      ]
+    );
+  };
+
   // Helper functions
   const formatWeight = (weight: number) => {
     if (!weight || weight <= 0) return '0 lb';
     const isInteger = Number.isInteger(weight);
-    if (weight >= 1000) {
-      return `${(weight / 1000).toFixed(1)}k lb`;
-    }
     return `${isInteger ? weight : weight.toFixed(1)} lb`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
-    }
   };
 
   // Transform workout data to match feed format
@@ -298,64 +336,6 @@ export default function ProfileScreen() {
       exercisePreviews: exercisePreviews.slice(0, 3), // Show first 3 exercises
     };
   }, [workoutsWithDetails]);
-
-  const handleWorkoutPressIn = (workoutId: number) => {
-    if (!workoutAnimatedValues.current[workoutId]) {
-      workoutAnimatedValues.current[workoutId] = new Animated.Value(1);
-    }
-    Animated.spring(workoutAnimatedValues.current[workoutId], {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleWorkoutPressOut = (workoutId: number) => {
-    if (!workoutAnimatedValues.current[workoutId]) {
-      workoutAnimatedValues.current[workoutId] = new Animated.Value(1);
-    }
-    Animated.spring(workoutAnimatedValues.current[workoutId], {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleStatPress = (statType: 'workouts' | 'followers' | 'following') => {
-    // Add press animation
-    Animated.sequence([
-      Animated.spring(animatedValues.current[statType], {
-        toValue: 0.95,
-        useNativeDriver: true,
-      }),
-      Animated.spring(animatedValues.current[statType], {
-        toValue: 1,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Navigate based on stat type
-    if (statType === 'workouts') {
-      navigation.navigate('MyWorkoutsList' as never);
-    } else if (statType === 'followers') {
-      navigation.navigate('Followers' as never);
-    } else if (statType === 'following') {
-      navigation.navigate('Following' as never);
-    }
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: logout
-        }
-      ]
-    );
-  };
 
 
   const activeUser = profileData || user;
@@ -589,161 +569,163 @@ export default function ProfileScreen() {
               <Text style={styles.emptySubtext}>Create your first workout to get started!</Text>
             </View>
           ) : (
-            workouts.map((workout, index) => {
-              const workoutData = transformWorkoutForCard(workout);
-              const scaleAnim = workoutAnimatedValues.current[workout.id] || new Animated.Value(1);
-              
-              return (
-                <Animated.View
-                  key={workout.id}
-                  style={[{ transform: [{ scale: scaleAnim }] }]}
-                >
-                  <TouchableOpacity 
-                    style={[
-                      styles.workoutCard,
-                      index % 2 === 1 && styles.workoutCardAlternate,
-                    ]}
-                    onPress={() =>
-                      navigation.navigate(
-                        'WorkoutDetail' as never,
-                        {
-                          workoutId: workout.id,
-                        } as never
-                      )
-                    }
-                    onPressIn={() => handleWorkoutPressIn(workout.id)}
-                    onPressOut={() => handleWorkoutPressOut(workout.id)}
-                    activeOpacity={1}
+            <View style={styles.workoutsContent}>
+              {workouts.map((workout, index) => {
+                const scaleAnim = workoutAnimatedValues.current[workout.id] || new Animated.Value(1);
+                const workoutData = transformWorkoutForCard(workout);
+                
+                return (
+                  <Animated.View
+                    key={workout.id}
+                    style={[{ transform: [{ scale: scaleAnim }] }]}
                   >
-                    {/* Workout Title */}
-                    <Text style={styles.workoutTitle}>{workout.title}</Text>
+                    <TouchableOpacity 
+                      style={[
+                        styles.workoutCard,
+                        index % 2 === 1 && styles.workoutCardAlternate,
+                      ]}
+                      onPress={() =>
+                        navigation.navigate(
+                          'WorkoutDetail' as never,
+                          {
+                            workoutId: workout.id,
+                          } as never
+                        )
+                      }
+                      onPressIn={() => handleWorkoutPressIn(workout.id)}
+                      onPressOut={() => handleWorkoutPressOut(workout.id)}
+                      activeOpacity={1}
+                    >
+                      {/* Workout Title */}
+                      <Text style={styles.workoutTitle}>{workout.title}</Text>
 
-                    {/* Workout Details */}
-                    <View style={styles.workoutMeta}>
-                      <DateDisplay dateString={workout.date} variant="feed" />
-                      {workout.duration && (
-                        <Text style={styles.workoutMetaText}>
-                          • {workout.duration} min
-                        </Text>
-                      )}
-                    </View>
-
-                    {/* Workout Summary Chips */}
-                    <View style={styles.chipGrid}>
-                      <View style={styles.chip}>
-                        <Ionicons name="barbell-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
-                        <View style={styles.chipTextContainer}>
-                          <Text style={styles.chipLabel}>Exercises</Text>
-                          <Text style={styles.chipValue}>{workoutData.exerciseCount || 0}</Text>
-                        </View>
-                      </View>
-                      <View style={styles.chip}>
-                        <Ionicons name="repeat-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
-                        <View style={styles.chipTextContainer}>
-                          <Text style={styles.chipLabel}>Sets</Text>
-                          <Text style={styles.chipValue}>{workoutData.totalSets || 0}</Text>
-                        </View>
-                      </View>
-                      {workoutData.totalVolume > 0 ? (
-                        <View style={styles.chip}>
-                          <Ionicons name="stats-chart-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
-                          <View style={styles.chipTextContainer}>
-                            <Text style={styles.chipLabel}>Volume</Text>
-                            <Text style={styles.chipValue}>
-                              {Math.round(workoutData.totalVolume)} lb
-                            </Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <View style={styles.chipPlaceholder} />
-                      )}
-                      {(workoutData.muscleGroups && workoutData.muscleGroups.length > 0) ? (
-                        <View style={styles.chip}>
-                          <Ionicons name="fitness-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
-                          <View style={styles.chipTextContainer}>
-                            <Text style={styles.chipLabel}>Muscles</Text>
-                            <Text style={styles.chipValue} numberOfLines={1}>
-                              {workoutData.muscleGroups.slice(0, 2).join(', ')}
-                              {workoutData.muscleGroups.length > 2 ? ' +' : ''}
-                            </Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <View style={styles.chipPlaceholder} />
-                      )}
-                    </View>
-
-                    {/* Workout Notes Preview */}
-                    {workout.notes && (
-                      <Text style={styles.workoutNotes} numberOfLines={2}>
-                        {workout.notes}
-                      </Text>
-                    )}
-
-                    {/* Exercise Preview List */}
-                    {workoutData.exercisePreviews && workoutData.exercisePreviews.length > 0 && (
-                      <View style={styles.exercisePreviewContainer}>
-                        {workoutData.exercisePreviews.map((exercise, exIndex) => {
-                          const isEvenRow = exIndex % 2 === 0;
-                          const hasHighWeight = exercise.top_weight > 0;
-                          const hasHighReps = exercise.total_reps > 50;
-                          
-                          return (
-                            <View 
-                              key={`${workout.id}-exercise-${exIndex}`} 
-                              style={[
-                                styles.exercisePreviewRow,
-                                isEvenRow && styles.exercisePreviewRowEven
-                              ]}
-                            >
-                              <Ionicons name="barbell" size={14} color="#5a6bff" style={styles.exerciseIcon} />
-                              <View style={styles.exercisePreviewContent}>
-                                <View style={styles.exercisePreviewHeader}>
-                                  <View style={styles.exerciseNameContainer}>
-                                    <Text style={styles.exercisePreviewName}>{exercise.name}</Text>
-                                    {hasHighWeight && (
-                                      <View style={styles.prBadge}>
-                                        <Text style={styles.prBadgeText}>PR</Text>
-                                      </View>
-                                    )}
-                                  </View>
-                                  <Text style={styles.exercisePreviewSets}>{exercise.set_count} sets</Text>
-                                </View>
-                                <View style={styles.exercisePreviewMeta}>
-                                  {exercise.total_reps > 0 ? (
-                                    <Text style={[
-                                      styles.exercisePreviewMetaText,
-                                      hasHighReps && styles.exercisePreviewMetaBlue
-                                    ]}>
-                                      {exercise.total_reps} reps
-                                    </Text>
-                                  ) : (
-                                    <Text style={styles.exercisePreviewMetaText}>—</Text>
-                                  )}
-                                  {exercise.top_weight > 0 && (
-                                    <Text style={[
-                                      styles.exercisePreviewMetaText,
-                                      styles.exercisePreviewMetaGreen
-                                    ]}>
-                                      {' • '}Top {formatWeight(exercise.top_weight)}
-                                    </Text>
-                                  )}
-                                </View>
-                              </View>
-                            </View>
-                          );
-                        })}
-                        {workoutData.exerciseCount && workoutData.exerciseCount > 3 && (
-                          <Text style={styles.exercisePreviewMore}>
-                            +{workoutData.exerciseCount - 3} more exercises
+                      {/* Workout Details */}
+                      <View style={styles.workoutMeta}>
+                        <DateDisplay dateString={workout.date} variant="feed" />
+                        {workout.duration && (
+                          <Text style={styles.workoutMetaText}>
+                            • {workout.duration} min
                           </Text>
                         )}
                       </View>
-                    )}
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })
+
+                      {/* Workout Summary Chips */}
+                      <View style={styles.chipGrid}>
+                        <View style={styles.chip}>
+                          <Ionicons name="barbell-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                          <View style={styles.chipTextContainer}>
+                            <Text style={styles.chipLabel}>Exercises</Text>
+                            <Text style={styles.chipValue}>{workoutData.exerciseCount || 0}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.chip}>
+                          <Ionicons name="repeat-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                          <View style={styles.chipTextContainer}>
+                            <Text style={styles.chipLabel}>Sets</Text>
+                            <Text style={styles.chipValue}>{workoutData.totalSets || 0}</Text>
+                          </View>
+                        </View>
+                        {workoutData.totalVolume > 0 ? (
+                          <View style={styles.chip}>
+                            <Ionicons name="stats-chart-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                            <View style={styles.chipTextContainer}>
+                              <Text style={styles.chipLabel}>Volume</Text>
+                              <Text style={styles.chipValue}>
+                                {Math.round(workoutData.totalVolume)} lb
+                              </Text>
+                            </View>
+                          </View>
+                        ) : (
+                          <View style={styles.chipPlaceholder} />
+                        )}
+                        {(workoutData.muscleGroups && workoutData.muscleGroups.length > 0) ? (
+                          <View style={styles.chip}>
+                            <Ionicons name="fitness-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                            <View style={styles.chipTextContainer}>
+                              <Text style={styles.chipLabel}>Muscles</Text>
+                              <Text style={styles.chipValue} numberOfLines={1}>
+                                {workoutData.muscleGroups.slice(0, 2).join(', ')}
+                                {workoutData.muscleGroups.length > 2 ? ' +' : ''}
+                              </Text>
+                            </View>
+                          </View>
+                        ) : (
+                          <View style={styles.chipPlaceholder} />
+                        )}
+                      </View>
+
+                      {/* Workout Notes Preview */}
+                      {workout.notes && (
+                        <Text style={styles.workoutNotes} numberOfLines={2}>
+                          {workout.notes}
+                        </Text>
+                      )}
+
+                      {/* Exercise Preview List */}
+                      {workoutData.exercisePreviews && workoutData.exercisePreviews.length > 0 && (
+                        <View style={styles.exercisePreviewContainer}>
+                          {workoutData.exercisePreviews.map((exercise, exIndex) => {
+                            const isEvenRow = exIndex % 2 === 0;
+                            const hasHighWeight = exercise.top_weight > 0;
+                            const hasHighReps = exercise.total_reps > 50;
+                            
+                            return (
+                              <View 
+                                key={`${workout.id}-exercise-${exIndex}`} 
+                                style={[
+                                  styles.exercisePreviewRow,
+                                  isEvenRow && styles.exercisePreviewRowEven
+                                ]}
+                              >
+                                <Ionicons name="barbell" size={14} color="#5a6bff" style={styles.exerciseIcon} />
+                                <View style={styles.exercisePreviewContent}>
+                                  <View style={styles.exercisePreviewHeader}>
+                                    <View style={styles.exerciseNameContainer}>
+                                      <Text style={styles.exercisePreviewName}>{exercise.name}</Text>
+                                      {hasHighWeight && (
+                                        <View style={styles.prBadge}>
+                                          <Text style={styles.prBadgeText}>PR</Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                    <Text style={styles.exercisePreviewSets}>{exercise.set_count} sets</Text>
+                                  </View>
+                                  <View style={styles.exercisePreviewMeta}>
+                                    {exercise.total_reps > 0 ? (
+                                      <Text style={[
+                                        styles.exercisePreviewMetaText,
+                                        hasHighReps && styles.exercisePreviewMetaBlue
+                                      ]}>
+                                        {exercise.total_reps} reps
+                                      </Text>
+                                    ) : (
+                                      <Text style={styles.exercisePreviewMetaText}>—</Text>
+                                    )}
+                                    {exercise.top_weight > 0 && (
+                                      <Text style={[
+                                        styles.exercisePreviewMetaText,
+                                        styles.exercisePreviewMetaGreen
+                                      ]}>
+                                        {' • '}Top {formatWeight(exercise.top_weight)}
+                                      </Text>
+                                    )}
+                                  </View>
+                                </View>
+                              </View>
+                            );
+                          })}
+                          {workoutData.exerciseCount && workoutData.exerciseCount > 3 && (
+                            <Text style={styles.exercisePreviewMore}>
+                              +{workoutData.exerciseCount - 3} more exercises
+                            </Text>
+                          )}
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </View>
           )}
         </View>
         
@@ -1018,6 +1000,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ccc',
     textAlign: 'center',
+  },
+  workoutsContent: {
+    padding: 0,
   },
   workoutCard: {
     backgroundColor: 'white',
