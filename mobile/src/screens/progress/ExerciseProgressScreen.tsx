@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { apiService, ExerciseDetails, ExerciseProgressPoint } from '../../services/api';
-import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
+import Svg, { Polyline, Circle, Line, Text as SvgText, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 type ExerciseProgressRouteParams = {
   ExerciseProgress: {
@@ -176,6 +177,27 @@ export default function ExerciseProgressScreen() {
     : null;
   const lastSessionAgoText = getWeeksAgoText(lastSessionDate);
 
+  // Calculate trend (comparing last 3 sessions to previous 3)
+  const trend = useMemo(() => {
+    if (sessionData.length < 6) return null;
+    const recent = sessionData.slice(-3);
+    const previous = sessionData.slice(-6, -3);
+    const recentAvg = recent.reduce((sum, p) => sum + getMetricValue(p), 0) / recent.length;
+    const previousAvg = previous.reduce((sum, p) => sum + getMetricValue(p), 0) / previous.length;
+    const change = ((recentAvg - previousAvg) / previousAvg) * 100;
+    return {
+      value: Math.abs(change),
+      isPositive: change > 0,
+      isNeutral: Math.abs(change) < 2,
+    };
+  }, [sessionData, activeMetric]);
+
+  // Calculate progress percentage (current vs best)
+  const progressPercentage = useMemo(() => {
+    if (!bestMetric || !latestMetricValue) return 0;
+    return Math.min(100, (latestMetricValue / bestMetric) * 100);
+  }, [latestMetricValue, bestMetric]);
+
   const summaryStats = useMemo(() => {
     const totalSessions = sessionData.length;
     const formatNumber = (value: number) =>
@@ -187,12 +209,14 @@ export default function ExerciseProgressScreen() {
         label: activeMetric === 'bestSetVolume'
           ? 'Best Volume'
           : activeMetric === 'oneRepMax'
-            ? 'Best\n1RM'
+            ? 'Best 1RM'
             : 'Best Weight',
         value:
           activeMetric === 'bestSetVolume'
             ? formatNumber(bestMetric)
             : metricConfig[activeMetric].format(bestMetric),
+        icon: 'trophy' as const,
+        color: '#FF6B35',
       },
       {
         key: 'average',
@@ -205,12 +229,16 @@ export default function ExerciseProgressScreen() {
           activeMetric === 'bestSetVolume'
             ? formatNumber(averageMetric)
             : metricConfig[activeMetric].format(averageMetric),
+        icon: 'stats-chart' as const,
+        color: '#0A84FF',
       },
       {
         key: 'sessions',
         label: 'Total Sessions',
         value: totalSessions.toString(),
         unit: undefined,
+        icon: 'calendar' as const,
+        color: '#10B981',
       },
     ];
   }, [activeMetric, averageMetric, bestMetric, metricConfig, sessionData.length]);
@@ -318,6 +346,22 @@ export default function ExerciseProgressScreen() {
       .join(' ');
   }, [weeklyChartData, weeklyMetricValue, chartWidth, weightRange]);
 
+  // Generate area path for gradient fill under the line
+  const areaPath = useMemo(() => {
+    if (weeklyChartData.length === 0 || !points || points.length === 0) return '';
+    const pointsArray = points.split(' ').map(p => p.split(',').map(Number));
+    if (pointsArray.length === 0) return '';
+    const bottomY = CHART_HEIGHT - 16;
+    
+    let path = `M ${pointsArray[0][0]},${bottomY} `;
+    pointsArray.forEach(([x, y]) => {
+      path += `L ${x},${y} `;
+    });
+    const lastX = pointsArray[pointsArray.length - 1][0];
+    path += `L ${lastX},${bottomY} Z`;
+    return path;
+  }, [points, weeklyChartData.length]);
+
   const renderChart = () => {
     if (weeklyChartData.every((week) => !week.hasData)) {
       return (
@@ -338,32 +382,49 @@ export default function ExerciseProgressScreen() {
             const valueLabel = weightRange.max - (weightRange.max - weightRange.min) * ratio;
             const y = CHART_HEIGHT - 16 - ratio * (CHART_HEIGHT - 36);
             return (
-              <>
+              <React.Fragment key={`grid-${ratio}`}>
                 <Line
-                  key={`line-${ratio}`}
                   x1={0}
                   y1={y}
                   x2={chartWidth}
                   y2={y}
-                  stroke="#eef1ff"
+                  stroke="#f0f4ff"
                   strokeWidth={1}
+                  strokeDasharray={ratio === 0.5 ? "0" : "4,4"}
                 />
                 {ratio === 0 || ratio === 0.5 || ratio === 1 ? (
                   <SvgText
-                    key={`label-${ratio}`}
                     x={chartWidth + 6}
                     y={y + 4}
                     fill="#98a2b3"
                     fontSize="10"
+                    fontWeight="500"
                   >
                     {metricConfig[activeMetric].unitSuffix === 'lb·reps'
-                      ? `${Math.max(valueLabel, 0).toFixed(0)} ${metricConfig[activeMetric].unitSuffix}`
-                      : `${Math.max(valueLabel, 0).toFixed(0)} ${metricConfig[activeMetric].unitSuffix}`}
+                      ? `${Math.max(valueLabel, 0).toFixed(0)}`
+                      : `${Math.max(valueLabel, 0).toFixed(0)}`}
                   </SvgText>
                 ) : null}
-              </>
+              </React.Fragment>
             );
           })}
+
+          {/* Gradient definition */}
+          <Defs>
+            <LinearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor="#0A84FF" stopOpacity="0.3" />
+              <Stop offset="100%" stopColor="#0A84FF" stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+
+          {/* Area fill under the line */}
+          {areaPath && (
+            <Path
+              d={areaPath}
+              fill="url(#gradient)"
+              opacity={0.2}
+            />
+          )}
 
           {/* Polyline */}
           {points.length > 0 && (
@@ -395,10 +456,10 @@ export default function ExerciseProgressScreen() {
                 key={`${point.start.toISOString()}-${index}`}
                 cx={x}
                 cy={y}
-                r={5}
+                r={6}
                 fill="#0A84FF"
                 stroke="white"
-                strokeWidth={2}
+                strokeWidth={2.5}
               />
             ) : null;
           })}
@@ -430,18 +491,18 @@ export default function ExerciseProgressScreen() {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Text style={styles.headerBackText}>← Back</Text>
+          <Ionicons name="chevron-back" size={24} color="#0A84FF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{exercise?.name || exerciseName}</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {exercise?.name || exerciseName}
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>
+            {muscleGroup || exercise?.muscle_group}
+            {exercise?.equipment_type ? ` • ${exercise.equipment_type}` : ''}
+          </Text>
+        </View>
         <View style={styles.headerSpacer} />
-      </View>
-
-      <View style={styles.header}>
-        <Text style={styles.exerciseName}>{exercise?.name || exerciseName}</Text>
-        <Text style={styles.exerciseMeta}>
-          {muscleGroup || exercise?.muscle_group}
-          {exercise?.equipment_type ? ` • ${exercise.equipment_type}` : ''}
-        </Text>
       </View>
 
       {isLoading ? (
@@ -453,10 +514,22 @@ export default function ExerciseProgressScreen() {
         <>
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeaderRow}>
-              <Text style={styles.summaryTitle}>Overview</Text>
-              <Text style={styles.summarySubtitle}>
-                Tracking {metricConfig[activeMetric].title.toLowerCase()}
-              </Text>
+              <View style={styles.summaryHeaderLeft}>
+                <Ionicons name="analytics" size={20} color="#0A84FF" />
+                <Text style={styles.summaryTitle}>Overview</Text>
+              </View>
+              {trend && !trend.isNeutral && (
+                <View style={[styles.trendBadge, trend.isPositive && styles.trendBadgePositive]}>
+                  <Ionicons
+                    name={trend.isPositive ? 'trending-up' : 'trending-down'}
+                    size={14}
+                    color={trend.isPositive ? '#10B981' : '#EF4444'}
+                  />
+                  <Text style={[styles.trendText, trend.isPositive && styles.trendTextPositive]}>
+                    {trend.value.toFixed(1)}%
+                  </Text>
+                </View>
+              )}
             </View>
             <View style={styles.summaryRow}>
               {summaryStats.map((stat, index) => (
@@ -467,6 +540,9 @@ export default function ExerciseProgressScreen() {
                     index < summaryStats.length - 1 && styles.summaryItemDivider,
                   ]}
                 >
+                  <View style={[styles.summaryIconContainer, { backgroundColor: `${stat.color}15` }]}>
+                    <Ionicons name={stat.icon} size={18} color={stat.color} />
+                  </View>
                   <Text style={styles.summaryLabel}>{stat.label}</Text>
                   <Text
                     style={styles.summaryValue}
@@ -483,15 +559,34 @@ export default function ExerciseProgressScreen() {
 
           <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
-              <Text style={styles.chartHeaderTitle}>{metricConfig[activeMetric].title}</Text>
-              <Text style={styles.chartHeaderRange}>Last 3 months ▾</Text>
+              <View>
+                <Text style={styles.chartHeaderTitle}>{metricConfig[activeMetric].title}</Text>
+                <Text style={styles.chartHeaderSubtitle}>Last 3 months</Text>
+              </View>
+              {latestMetricValue > 0 && (
+                <View style={styles.progressIndicator}>
+                  <View style={styles.progressBarContainer}>
+                    <View
+                      style={[
+                        styles.progressBar,
+                        { width: `${progressPercentage}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>{Math.round(progressPercentage)}%</Text>
+                </View>
+              )}
             </View>
-            <Text style={styles.chartSummary}>
-              <Text style={styles.chartSummaryValue}>
-                {metricConfig[activeMetric].format(latestMetricValue)}
-              </Text>{' '}
-              Last session · {lastSessionAgoText}
-            </Text>
+            <View style={styles.chartSummaryContainer}>
+              <View>
+                <Text style={styles.chartSummaryValue}>
+                  {metricConfig[activeMetric].format(latestMetricValue)}
+                </Text>
+                <Text style={styles.chartSummaryLabel}>
+                  Last session · {lastSessionAgoText}
+                </Text>
+              </View>
+            </View>
             {renderChart()}
             <View style={styles.chartTabs}>
               <TouchableOpacity
@@ -546,9 +641,12 @@ export default function ExerciseProgressScreen() {
           </View>
 
           <View style={styles.notesCard}>
-            <Text style={styles.notesTitle}>Tip</Text>
+            <View style={styles.notesHeader}>
+              <Ionicons name="bulb" size={20} color="#FF6B35" />
+              <Text style={styles.notesTitle}>Pro Tip</Text>
+            </View>
             <Text style={styles.notesBody}>
-              Log your sets with accurate weight and reps to see more detailed progress.
+              Log your sets with accurate weight and reps to see more detailed progress over time.
             </Text>
           </View>
         </>
@@ -575,39 +673,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   headerBack: {
     paddingVertical: 6,
-    paddingRight: 12,
+    paddingRight: 8,
+    width: 40,
+    alignItems: 'flex-start',
   },
-  headerBackText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0A84FF',
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   headerTitle: {
-    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
   },
-  headerSpacer: {
-    width: 60,
-  },
-  header: {
-    marginBottom: 16,
-  },
-  exerciseName: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  exerciseMeta: {
-    fontSize: 14,
+  headerSubtitle: {
+    fontSize: 13,
     color: '#6b7280',
-    marginTop: 4,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
   loadingContainer: {
     paddingVertical: 60,
@@ -619,96 +712,146 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     backgroundColor: 'white',
-    borderRadius: 18,
-    paddingVertical: 18,
+    borderRadius: 20,
+    paddingVertical: 20,
     paddingHorizontal: 20,
     marginBottom: 20,
-    gap: 16,
+    gap: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   summaryHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  summaryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   summaryTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#111827',
   },
-  summarySubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  trendBadgePositive: {
+    backgroundColor: '#F0FDF4',
+  },
+  trendText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  trendTextPositive: {
+    color: '#10B981',
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#f7f8ff',
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e4e7ff',
+    backgroundColor: '#FAFBFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8EDFF',
+    paddingVertical: 4,
   },
   summaryItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 14,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    gap: 8,
     minWidth: 0,
-    minHeight: 98,
   },
   summaryItemDivider: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: '#e4e7ff',
+    borderRightWidth: 1,
+    borderRightColor: '#E8EDFF',
   },
-   summaryLabel: {
-     fontSize: 10.5,
-     color: '#7381a3',
-     textTransform: 'uppercase',
-     letterSpacing: 0.4,
-     textAlign: 'center',
-     lineHeight: 15,
-   },
+  summaryIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    lineHeight: 14,
+    fontWeight: '600',
+  },
   summaryValue: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#111827',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: 26,
   },
   chartCard: {
     backgroundColor: 'white',
     borderRadius: 20,
     paddingVertical: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 2,
   },
   chartHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
   chartHeaderTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#111827',
+    marginBottom: 2,
   },
-  chartHeaderRange: {
-    fontSize: 14,
-    color: '#0A84FF',
+  chartHeaderSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  progressIndicator: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  progressBarContainer: {
+    width: 80,
+    height: 6,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#0A84FF',
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 11,
     fontWeight: '600',
+    color: '#0A84FF',
   },
   chartWrapper: {
     alignItems: 'center',
@@ -725,71 +868,86 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#98a2b3',
   },
-  chartSummary: {
-    fontSize: 14,
-    color: '#667085',
-    marginBottom: 6,
+  chartSummaryContainer: {
+    marginBottom: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   chartSummaryValue: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#111827',
+    marginBottom: 4,
+  },
+  chartSummaryLabel: {
+    fontSize: 14,
+    color: '#6b7280',
   },
   emptyChart: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 50,
   },
   emptyChartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   emptyChartSubtitle: {
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    lineHeight: 20,
   },
   chartTabs: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 8,
-    marginTop: 4,
-    paddingHorizontal: 10,
+    marginTop: 16,
+    paddingHorizontal: 4,
   },
   chartTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center', 
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#f0f3ff',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   chartTabActive: {
     backgroundColor: '#0A84FF',
+    borderColor: '#0A84FF',
   },
   chartTabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
+    color: '#6b7280',
   },
   chartTabTextActive: {
     color: 'white',
   },
   notesCard: {
-    backgroundColor: '#F8FAFF',
+    backgroundColor: '#FFF7ED',
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#E4E9FF',
+    borderColor: '#FFE4CC',
+  },
+  notesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
   },
   notesTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1f2937',
-    marginBottom: 8,
   },
   notesBody: {
     fontSize: 14,
