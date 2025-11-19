@@ -2,6 +2,32 @@
 
 A full-stack social fitness application that allows users to log workouts, track exercises, and share their fitness journey with others. Built with React Native (Expo) for mobile and Node.js/Express for the backend.
 
+## 📸 Screenshots
+
+### Home Feed
+![Home Feed](screenshots/home_page.PNG)
+*View workouts from users you follow with detailed exercise previews, stats, and social interactions*
+
+### Create Workout
+![Create Workout](screenshots/new_workout.PNG)
+*Log your workouts with detailed exercise tracking, sets, reps, and weights*
+
+### Progress Tracking
+![Progress Page](screenshots/progess_page.PNG)
+*Browse exercises by muscle group and track your progress over time*
+
+### Exercise Search
+![Search Page](screenshots/search_page.PNG)
+*Discover new exercises with comprehensive search and filtering options*
+
+### User Profile
+![User Profile](screenshots/user_page.PNG)
+*View your profile with workout statistics, weekly analytics, and activity charts*
+
+### Profile Workouts
+![Profile Workouts](screenshots/user_page_2.PNG)
+*Browse your workout history with detailed exercise information and progress tracking*
+
 ## 🏋️ Features
 
 ### Core Functionality
