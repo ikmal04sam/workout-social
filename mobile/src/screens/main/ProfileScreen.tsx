@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Image, Animated } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { apiService, Workout, User } from '../../services/api';
 import DateDisplay from '../../components/DateDisplay';
 
@@ -11,14 +12,13 @@ interface ProfileStats {
   following_count: number;
 }
 
-type MetricType = 'duration' | 'volume' | 'reps';
+type MetricType = 'duration' | 'volume';
 
 interface WeeklyData {
   start: Date;
   end: Date;
   hours: number;
   volume: number; // total volume in lb·reps
-  reps: number; // total reps
   label: string;
   monthLabel: string;
 }
@@ -58,7 +58,6 @@ const buildWeeklyData = (workouts: WorkoutWithDetails[]): WeeklyData[] => {
       end,
       hours: 0,
       volume: 0,
-      reps: 0,
       label: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       monthLabel: start.toLocaleDateString('en-US', { month: 'short' }),
     });
@@ -92,7 +91,7 @@ const buildWeeklyData = (workouts: WorkoutWithDetails[]): WeeklyData[] => {
       }
     }
 
-    // Calculate volume and reps from exercises and sets
+    // Calculate volume from exercises and sets
     if (workout.exercises && Array.isArray(workout.exercises)) {
       workout.exercises.forEach((exercise) => {
         if (exercise.sets && Array.isArray(exercise.sets)) {
@@ -100,11 +99,8 @@ const buildWeeklyData = (workouts: WorkoutWithDetails[]): WeeklyData[] => {
             const reps = Number(set.reps) || 0;
             const weight = Number(set.weight) || 0;
             
-            if (reps > 0) {
-              targetWeek!.reps += reps;
-              if (weight > 0) {
-                targetWeek!.volume += reps * weight;
-              }
+            if (reps > 0 && weight > 0) {
+              targetWeek!.volume += reps * weight;
             }
           });
         }
@@ -138,6 +134,12 @@ export default function ProfileScreen() {
     following_count: 0,
   });
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('duration');
+  const animatedValues = useRef<Record<string, Animated.Value>>({
+    workouts: new Animated.Value(1),
+    followers: new Animated.Value(1),
+    following: new Animated.Value(1),
+  });
+  const workoutAnimatedValues = useRef<Record<number, Animated.Value>>({});
 
   const loadWorkouts = useCallback(async () => {
     try {
@@ -198,6 +200,148 @@ export default function ProfileScreen() {
     loadWorkouts();
   };
 
+  // Helper functions
+  const formatWeight = (weight: number) => {
+    if (!weight || weight <= 0) return '0 lb';
+    const isInteger = Number.isInteger(weight);
+    if (weight >= 1000) {
+      return `${(weight / 1000).toFixed(1)}k lb`;
+    }
+    return `${isInteger ? weight : weight.toFixed(1)} lb`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+  };
+
+  // Transform workout data to match feed format
+  const transformWorkoutForCard = useCallback((workout: Workout) => {
+    const workoutDetail = workoutsWithDetails.find(w => w.id === workout.id);
+    if (!workoutDetail?.exercises) {
+      return {
+        exerciseCount: 0,
+        totalSets: 0,
+        totalVolume: 0,
+        muscleGroups: [],
+        exercisePreviews: [],
+      };
+    }
+
+    let totalSets = 0;
+    let totalVolume = 0;
+    const muscleGroupsSet = new Set<string>();
+    const exercisePreviews: Array<{
+      name: string;
+      set_count: number;
+      total_reps: number;
+      top_weight: number;
+      total_volume: number;
+    }> = [];
+
+    workoutDetail.exercises.forEach((exercise) => {
+      if (exercise.muscle_group) {
+        muscleGroupsSet.add(exercise.muscle_group);
+      }
+
+      if (exercise.sets && Array.isArray(exercise.sets)) {
+        const setCount = exercise.sets.length;
+        totalSets += setCount;
+        
+        let exerciseTotalReps = 0;
+        let exerciseTopWeight = 0;
+        let exerciseVolume = 0;
+
+        exercise.sets.forEach((set) => {
+          const reps = Number(set.reps) || 0;
+          const weight = Number(set.weight) || 0;
+          exerciseTotalReps += reps;
+          if (weight > exerciseTopWeight) {
+            exerciseTopWeight = weight;
+          }
+          if (reps > 0 && weight > 0) {
+            exerciseVolume += reps * weight;
+            totalVolume += reps * weight;
+          }
+        });
+
+        exercisePreviews.push({
+          name: exercise.exercise_name || exercise.name || 'Unknown',
+          set_count: setCount,
+          total_reps: exerciseTotalReps,
+          top_weight: exerciseTopWeight,
+          total_volume: exerciseVolume,
+        });
+      }
+    });
+
+    return {
+      exerciseCount: workoutDetail.exercises.length,
+      totalSets,
+      totalVolume,
+      muscleGroups: Array.from(muscleGroupsSet),
+      exercisePreviews: exercisePreviews.slice(0, 3), // Show first 3 exercises
+    };
+  }, [workoutsWithDetails]);
+
+  const handleWorkoutPressIn = (workoutId: number) => {
+    if (!workoutAnimatedValues.current[workoutId]) {
+      workoutAnimatedValues.current[workoutId] = new Animated.Value(1);
+    }
+    Animated.spring(workoutAnimatedValues.current[workoutId], {
+      toValue: 0.98,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleWorkoutPressOut = (workoutId: number) => {
+    if (!workoutAnimatedValues.current[workoutId]) {
+      workoutAnimatedValues.current[workoutId] = new Animated.Value(1);
+    }
+    Animated.spring(workoutAnimatedValues.current[workoutId], {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleStatPress = (statType: 'workouts' | 'followers' | 'following') => {
+    // Add press animation
+    Animated.sequence([
+      Animated.spring(animatedValues.current[statType], {
+        toValue: 0.95,
+        useNativeDriver: true,
+      }),
+      Animated.spring(animatedValues.current[statType], {
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Navigate based on stat type
+    if (statType === 'workouts') {
+      navigation.navigate('MyWorkoutsList' as never);
+    } else if (statType === 'followers') {
+      navigation.navigate('Followers' as never);
+    } else if (statType === 'following') {
+      navigation.navigate('Following' as never);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Logout',
@@ -235,8 +379,6 @@ export default function ProfileScreen() {
         return week.hours;
       case 'volume':
         return week.volume;
-      case 'reps':
-        return week.reps;
       default:
         return 0;
     }
@@ -258,8 +400,6 @@ export default function ProfileScreen() {
         return `${value.toFixed(1)} hrs`;
       case 'volume':
         return `${Math.round(value).toLocaleString()} lb·reps`;
-      case 'reps':
-        return `${Math.round(value).toLocaleString()} reps`;
       default:
         return '0';
     }
@@ -305,24 +445,50 @@ export default function ProfileScreen() {
               <View style={styles.compactStatsRow}>
                 <TouchableOpacity
                   style={styles.compactStatItem}
-                  onPress={() => navigation.navigate('MyWorkoutsList' as never)}
+                  activeOpacity={0.7}
+                  onPress={() => handleStatPress('workouts')}
                 >
-                  <Text style={styles.compactLabel}>Workouts</Text>
-                  <Text style={styles.compactValue}>{stats.workouts}</Text>
+                  <Animated.View
+                    style={[
+                      styles.compactStatContent,
+                      { transform: [{ scale: animatedValues.current.workouts }] },
+                    ]}
+                  >
+                    <Text style={styles.compactValue}>{stats.workouts}</Text>
+                    <Text style={styles.compactLabel}>WORKOUTS</Text>
+                  </Animated.View>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.compactStatItem}
-                  onPress={() => navigation.navigate('Followers' as never)}
+                  activeOpacity={0.7}
+                  onPress={() => handleStatPress('followers')}
                 >
-                  <Text style={styles.compactLabel}>Followers</Text>
-                  <Text style={styles.compactValue}>{stats.followers}</Text>
+                  <Animated.View
+                    style={[
+                      styles.compactStatContent,
+                      { transform: [{ scale: animatedValues.current.followers }] },
+                    ]}
+                  >
+                    <Text style={styles.compactValue}>{stats.followers}</Text>
+                    <Text style={styles.compactLabel}>FOLLOWERS</Text>
+                  </Animated.View>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.compactStatItem}
-                  onPress={() => navigation.navigate('Following' as never)}
+                  activeOpacity={0.7}
+                  onPress={() => handleStatPress('following')}
                 >
-                  <Text style={styles.compactLabel}>Following</Text>
-                  <Text style={styles.compactValue}>{stats.following}</Text>
+                  <Animated.View
+                    style={[
+                      styles.compactStatContent,
+                      { transform: [{ scale: animatedValues.current.following }] },
+                    ]}
+                  >
+                    <Text style={styles.compactValue}>{stats.following}</Text>
+                    <Text style={styles.compactLabel}>FOLLOWING</Text>
+                  </Animated.View>
                 </TouchableOpacity>
             </View>
           </View>
@@ -347,13 +513,13 @@ export default function ProfileScreen() {
         {/* Weekly Activity Chart */}
         <View style={[styles.chartCard, styles.chartCardSpacing]}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartSummary}>
-              <Text style={styles.chartSummaryValue}>{formatMetricValue(latestWeekValue, selectedMetric)}</Text>{' '}
-              {lastWorkoutAgoText}
-            </Text>
+            <View style={styles.chartSummaryContainer}>
+              <Text style={styles.chartSummaryValue}>{formatMetricValue(latestWeekValue, selectedMetric)}</Text>
+              <Text style={styles.chartSummaryLabel}>{lastWorkoutAgoText}</Text>
+            </View>
             <View style={styles.chartRange}>
               <Text style={styles.chartRangeText}>Last 3 months</Text>
-              <Text style={styles.chartRangeCaret}>▾</Text>
+              <Ionicons name="chevron-down" size={14} color="#0A84FF" />
             </View>
           </View>
 
@@ -378,7 +544,14 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={[styles.chartTab, selectedMetric === 'duration' && styles.chartTabActive]}
               onPress={() => setSelectedMetric('duration')}
+              activeOpacity={0.7}
             >
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={selectedMetric === 'duration' ? 'white' : '#6B7280'}
+                style={styles.chartTabIcon}
+              />
               <Text style={[styles.chartTabText, selectedMetric === 'duration' && styles.chartTabTextActive]}>
                 Duration
               </Text>
@@ -386,17 +559,16 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={[styles.chartTab, selectedMetric === 'volume' && styles.chartTabActive]}
               onPress={() => setSelectedMetric('volume')}
+              activeOpacity={0.7}
             >
+              <Ionicons
+                name="stats-chart-outline"
+                size={16}
+                color={selectedMetric === 'volume' ? 'white' : '#6B7280'}
+                style={styles.chartTabIcon}
+              />
               <Text style={[styles.chartTabText, selectedMetric === 'volume' && styles.chartTabTextActive]}>
                 Volume
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.chartTab, selectedMetric === 'reps' && styles.chartTabActive]}
-              onPress={() => setSelectedMetric('reps')}
-            >
-              <Text style={[styles.chartTabText, selectedMetric === 'reps' && styles.chartTabTextActive]}>
-                Reps
               </Text>
             </TouchableOpacity>
           </View>
@@ -417,47 +589,161 @@ export default function ProfileScreen() {
               <Text style={styles.emptySubtext}>Create your first workout to get started!</Text>
             </View>
           ) : (
-            workouts.map((workout) => (
-              <TouchableOpacity 
-                key={workout.id} 
-                style={styles.workoutCard}
-                onPress={() =>
-                  navigation.navigate(
-                    'WorkoutDetail' as never,
-                    {
-                      workoutId: workout.id,
-                    } as never
-                  )
-                }
-                activeOpacity={0.7}
-              >
-                <View style={styles.workoutContent}>
-                  <View style={styles.workoutMain}>
-                    <View style={styles.workoutHeader}>
-                      <Text style={styles.workoutTitle} numberOfLines={1}>
-                        {workout.title}
-                      </Text>
-                      <View style={[styles.workoutBadge, workout.is_public ? styles.publicBadge : styles.privateBadge]}>
-                        <Text style={[styles.workoutBadgeText, workout.is_public ? styles.publicBadgeText : styles.privateBadgeText]}>
-                          {workout.is_public ? 'Public' : 'Private'}
+            workouts.map((workout, index) => {
+              const workoutData = transformWorkoutForCard(workout);
+              const scaleAnim = workoutAnimatedValues.current[workout.id] || new Animated.Value(1);
+              
+              return (
+                <Animated.View
+                  key={workout.id}
+                  style={[{ transform: [{ scale: scaleAnim }] }]}
+                >
+                  <TouchableOpacity 
+                    style={[
+                      styles.workoutCard,
+                      index % 2 === 1 && styles.workoutCardAlternate,
+                    ]}
+                    onPress={() =>
+                      navigation.navigate(
+                        'WorkoutDetail' as never,
+                        {
+                          workoutId: workout.id,
+                        } as never
+                      )
+                    }
+                    onPressIn={() => handleWorkoutPressIn(workout.id)}
+                    onPressOut={() => handleWorkoutPressOut(workout.id)}
+                    activeOpacity={1}
+                  >
+                    {/* Workout Title */}
+                    <Text style={styles.workoutTitle}>{workout.title}</Text>
+
+                    {/* Workout Details */}
+                    <View style={styles.workoutMeta}>
+                      <DateDisplay dateString={workout.date} variant="feed" />
+                      {workout.duration && (
+                        <Text style={styles.workoutMetaText}>
+                          • {workout.duration} min
                         </Text>
-                      </View>
+                      )}
                     </View>
-                    {workout.duration && (
-                      <Text style={styles.workoutDuration}>Duration: {workout.duration} min</Text>
-                    )}
+
+                    {/* Workout Summary Chips */}
+                    <View style={styles.chipGrid}>
+                      <View style={styles.chip}>
+                        <Ionicons name="barbell-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                        <View style={styles.chipTextContainer}>
+                          <Text style={styles.chipLabel}>Exercises</Text>
+                          <Text style={styles.chipValue}>{workoutData.exerciseCount || 0}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.chip}>
+                        <Ionicons name="repeat-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                        <View style={styles.chipTextContainer}>
+                          <Text style={styles.chipLabel}>Sets</Text>
+                          <Text style={styles.chipValue}>{workoutData.totalSets || 0}</Text>
+                        </View>
+                      </View>
+                      {workoutData.totalVolume > 0 ? (
+                        <View style={styles.chip}>
+                          <Ionicons name="stats-chart-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                          <View style={styles.chipTextContainer}>
+                            <Text style={styles.chipLabel}>Volume</Text>
+                            <Text style={styles.chipValue}>
+                              {Math.round(workoutData.totalVolume)} lb
+                            </Text>
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={styles.chipPlaceholder} />
+                      )}
+                      {(workoutData.muscleGroups && workoutData.muscleGroups.length > 0) ? (
+                        <View style={styles.chip}>
+                          <Ionicons name="fitness-outline" size={16} color="#5a6bff" style={styles.chipIcon} />
+                          <View style={styles.chipTextContainer}>
+                            <Text style={styles.chipLabel}>Muscles</Text>
+                            <Text style={styles.chipValue} numberOfLines={1}>
+                              {workoutData.muscleGroups.slice(0, 2).join(', ')}
+                              {workoutData.muscleGroups.length > 2 ? ' +' : ''}
+                            </Text>
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={styles.chipPlaceholder} />
+                      )}
+                    </View>
+
+                    {/* Workout Notes Preview */}
                     {workout.notes && (
                       <Text style={styles.workoutNotes} numberOfLines={2}>
                         {workout.notes}
                       </Text>
                     )}
-                  </View>
-                  <View style={styles.dateContainer}>
-                    <DateDisplay dateString={workout.date} variant="list" />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
+
+                    {/* Exercise Preview List */}
+                    {workoutData.exercisePreviews && workoutData.exercisePreviews.length > 0 && (
+                      <View style={styles.exercisePreviewContainer}>
+                        {workoutData.exercisePreviews.map((exercise, exIndex) => {
+                          const isEvenRow = exIndex % 2 === 0;
+                          const hasHighWeight = exercise.top_weight > 0;
+                          const hasHighReps = exercise.total_reps > 50;
+                          
+                          return (
+                            <View 
+                              key={`${workout.id}-exercise-${exIndex}`} 
+                              style={[
+                                styles.exercisePreviewRow,
+                                isEvenRow && styles.exercisePreviewRowEven
+                              ]}
+                            >
+                              <Ionicons name="barbell" size={14} color="#5a6bff" style={styles.exerciseIcon} />
+                              <View style={styles.exercisePreviewContent}>
+                                <View style={styles.exercisePreviewHeader}>
+                                  <View style={styles.exerciseNameContainer}>
+                                    <Text style={styles.exercisePreviewName}>{exercise.name}</Text>
+                                    {hasHighWeight && (
+                                      <View style={styles.prBadge}>
+                                        <Text style={styles.prBadgeText}>PR</Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                  <Text style={styles.exercisePreviewSets}>{exercise.set_count} sets</Text>
+                                </View>
+                                <View style={styles.exercisePreviewMeta}>
+                                  {exercise.total_reps > 0 ? (
+                                    <Text style={[
+                                      styles.exercisePreviewMetaText,
+                                      hasHighReps && styles.exercisePreviewMetaBlue
+                                    ]}>
+                                      {exercise.total_reps} reps
+                                    </Text>
+                                  ) : (
+                                    <Text style={styles.exercisePreviewMetaText}>—</Text>
+                                  )}
+                                  {exercise.top_weight > 0 && (
+                                    <Text style={[
+                                      styles.exercisePreviewMetaText,
+                                      styles.exercisePreviewMetaGreen
+                                    ]}>
+                                      {' • '}Top {formatWeight(exercise.top_weight)}
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+                          );
+                        })}
+                        {workoutData.exerciseCount && workoutData.exerciseCount > 3 && (
+                          <Text style={styles.exercisePreviewMore}>
+                            +{workoutData.exerciseCount - 3} more exercises
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })
           )}
         </View>
         
@@ -528,21 +814,28 @@ const styles = StyleSheet.create({
   },
   compactStatsRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
+    marginTop: 4,
   },
   compactStatItem: {
     alignItems: 'flex-start',
+    minWidth: 70,
   },
-  compactLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+  compactStatContent: {
+    alignItems: 'flex-start',
+    gap: 4,
   },
   compactValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#111827',
+  },
+  compactLabel: {
+    fontSize: 10,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
   chartCard: {
     backgroundColor: 'white',
@@ -562,32 +855,37 @@ const styles = StyleSheet.create({
   chartHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  chartSummary: {
-    fontSize: 14,
-    color: '#667085',
+  chartSummaryContainer: {
+    flex: 1,
+    gap: 4,
   },
   chartSummaryValue: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#111827',
+    marginBottom: 2,
+  },
+  chartSummaryLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   chartRange: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginTop: 2,
   },
   chartRangeText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#0A84FF',
     fontWeight: '600',
-  },
-  chartRangeCaret: {
-    fontSize: 12,
-    color: '#0A84FF',
-    marginTop: 2,
   },
   chart: {
     flexDirection: 'row',
@@ -623,21 +921,31 @@ const styles = StyleSheet.create({
   chartTabs: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
+    marginTop: 4,
   },
   chartTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: '#f0f3ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   chartTabActive: {
     backgroundColor: '#0A84FF',
+    borderColor: '#0A84FF',
+  },
+  chartTabIcon: {
+    marginRight: 0,
   },
   chartTabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#334155',
+    color: '#6B7280',
   },
   chartTabTextActive: {
     color: 'white',
@@ -713,83 +1021,169 @@ const styles = StyleSheet.create({
   },
   workoutCard: {
     backgroundColor: 'white',
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
+    marginBottom: 20,
+    shadowColor: '#e5e7eb',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: 'transparent',
   },
-  workoutContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  workoutMain: {
-    flex: 1,
-    marginRight: 16,
-    minWidth: 0,
-  },
-  workoutHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+  workoutCardAlternate: {
+    backgroundColor: '#fafafa',
   },
   workoutTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    flex: 1,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
   },
-  workoutBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    flexShrink: 0,
-  },
-  publicBadge: {
-    backgroundColor: '#E3F2FD',
-  },
-  privateBadge: {
-    backgroundColor: '#fdecea',
-  },
-  workoutBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  publicBadgeText: {
-    color: '#0A84FF',
-  },
-  privateBadgeText: {
-    color: '#d93025',
-  },
-  dateContainer: {
+  workoutMeta: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    flexShrink: 0,
+    marginBottom: 8,
   },
-  workoutDate: {
+  workoutMetaText: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
-  },
-  workoutDuration: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 6,
-    fontWeight: '500',
+    marginLeft: 4,
+    fontWeight: '400',
   },
   workoutNotes: {
     fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
+    color: '#666',
     lineHeight: 20,
+    marginBottom: 12,
+    fontWeight: '300',
+  },
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+    marginHorizontal: -6,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    width: '48%',
+    marginHorizontal: '1%',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  chipPlaceholder: {
+    width: '48%',
+    marginHorizontal: '1%',
+  },
+  chipIcon: {
+    marginRight: 8,
+  },
+  chipTextContainer: {
+    flex: 1,
+  },
+  chipLabel: {
+    fontSize: 10,
+    textTransform: 'uppercase',
+    color: '#6b7280',
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  chipValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  exercisePreviewContainer: {
+    borderWidth: 1,
+    borderColor: '#eef0f5',
+    borderRadius: 12,
+    padding: 8,
+    backgroundColor: '#fafbff',
+    marginBottom: 12,
+  },
+  exercisePreviewRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  exercisePreviewRowEven: {
+    backgroundColor: '#f5f7ff',
+  },
+  exerciseIcon: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  exercisePreviewContent: {
+    flex: 1,
+  },
+  exercisePreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  exerciseNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  exercisePreviewName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginRight: 6,
+  },
+  prBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  prBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.3,
+  },
+  exercisePreviewSets: {
+    fontSize: 13,
+    color: '#667085',
+    fontWeight: '500',
+  },
+  exercisePreviewMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  exercisePreviewMetaText: {
+    fontSize: 13,
+    color: '#667085',
+  },
+  exercisePreviewMetaBlue: {
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+  exercisePreviewMetaGreen: {
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  exercisePreviewMore: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#5a6bff',
+    fontWeight: '600',
   },
   button: {
     backgroundColor: '#FF3B30',

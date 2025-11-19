@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,12 @@ import {
   Alert,
   RefreshControl,
   Image,
+  Animated,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { apiService, Workout } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import DateDisplay from '../../components/DateDisplay';
@@ -47,6 +49,11 @@ export default function UserProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [following, setFollowing] = useState(false);
   const [isFollowingAction, setIsFollowingAction] = useState(false);
+  const animatedValues = useRef<Record<string, Animated.Value>>({
+    workouts: new Animated.Value(1),
+    followers: new Animated.Value(1),
+    following: new Animated.Value(1),
+  });
 
   const loadUserProfile = useCallback(async () => {
     try {
@@ -90,6 +97,27 @@ export default function UserProfileScreen() {
     setRefreshing(true);
     loadUserProfile();
     loadWorkouts();
+  };
+
+  const handleStatPress = (statType: 'workouts' | 'followers' | 'following') => {
+    // Add press animation
+    Animated.sequence([
+      Animated.spring(animatedValues.current[statType], {
+        toValue: 0.95,
+        useNativeDriver: true,
+      }),
+      Animated.spring(animatedValues.current[statType], {
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Navigate based on stat type
+    if (statType === 'followers') {
+      // Could navigate to followers list if implemented
+    } else if (statType === 'following') {
+      // Could navigate to following list if implemented
+    }
   };
 
   const handleFollow = async () => {
@@ -198,18 +226,66 @@ export default function UserProfileScreen() {
           )}
 
           <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.follower_count}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.following_count}</Text>
-              <Text style={styles.statLabel}>Following</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{workouts.length}</Text>
-              <Text style={styles.statLabel}>Workouts</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.statItem}
+              activeOpacity={0.7}
+              onPress={() => handleStatPress('workouts')}
+            >
+              <Animated.View
+                style={[
+                  styles.statItemContent,
+                  { transform: [{ scale: animatedValues.current.workouts }] },
+                ]}
+              >
+                <View style={[styles.statIconContainer, { backgroundColor: '#0A84FF15' }]}>
+                  <Ionicons name="barbell" size={20} color="#0A84FF" />
+                </View>
+                <Text style={styles.statValue}>{workouts.length}</Text>
+                <Text style={styles.statLabel}>WORKOUTS</Text>
+              </Animated.View>
+            </TouchableOpacity>
+
+            <View style={styles.statDivider} />
+
+            <TouchableOpacity
+              style={styles.statItem}
+              activeOpacity={0.7}
+              onPress={() => handleStatPress('followers')}
+            >
+              <Animated.View
+                style={[
+                  styles.statItemContent,
+                  { transform: [{ scale: animatedValues.current.followers }] },
+                ]}
+              >
+                <View style={[styles.statIconContainer, { backgroundColor: '#10B98115' }]}>
+                  <Ionicons name="people" size={20} color="#10B981" />
+                </View>
+                <Text style={styles.statValue}>{user.follower_count}</Text>
+                <Text style={styles.statLabel}>FOLLOWERS</Text>
+              </Animated.View>
+            </TouchableOpacity>
+
+            <View style={styles.statDivider} />
+
+            <TouchableOpacity
+              style={styles.statItem}
+              activeOpacity={0.7}
+              onPress={() => handleStatPress('following')}
+            >
+              <Animated.View
+                style={[
+                  styles.statItemContent,
+                  { transform: [{ scale: animatedValues.current.following }] },
+                ]}
+              >
+                <View style={[styles.statIconContainer, { backgroundColor: '#8B5CF615' }]}>
+                  <Ionicons name="person-add" size={20} color="#8B5CF6" />
+                </View>
+                <Text style={styles.statValue}>{user.following_count}</Text>
+                <Text style={styles.statLabel}>FOLLOWING</Text>
+              </Animated.View>
+            </TouchableOpacity>
           </View>
 
           {!isOwnProfile && (
@@ -366,24 +442,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e0e0e0',
+    paddingVertical: 24,
     marginBottom: 20,
+    gap: 8,
   },
   statItem: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+  statItemContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 4,
   },
+  statDivider: {
+    width: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 8,
+  },
+  statValue: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 2,
+  },
   statLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   followButton: {
     backgroundColor: '#007AFF',
