@@ -5,27 +5,27 @@ A full-stack social fitness application that allows users to log workouts, track
 ## 📸 Screenshots
 
 ### Home Feed
-![Home Feed](screenshots/home_page.PNG)
+<img src="screenshots/home_page.PNG" width="300" alt="Home Feed">
 *View workouts from users you follow with detailed exercise previews, stats, and social interactions*
 
 ### Create Workout
-![Create Workout](screenshots/new_workout.PNG)
+<img src="screenshots/new_workout.PNG" width="300" alt="Create Workout">
 *Log your workouts with detailed exercise tracking, sets, reps, and weights*
 
 ### Progress Tracking
-![Progress Page](screenshots/progess_page.PNG)
+<img src="screenshots/progess_page.PNG" width="300" alt="Progress Page">
 *Browse exercises by muscle group and track your progress over time*
 
 ### Exercise Search
-![Search Page](screenshots/search_page.PNG)
+<img src="screenshots/search_page.PNG" width="300" alt="Search Page">
 *Discover new exercises with comprehensive search and filtering options*
 
 ### User Profile
-![User Profile](screenshots/user_page.PNG)
+<img src="screenshots/user_page.PNG" width="300" alt="User Profile">
 *View your profile with workout statistics, weekly analytics, and activity charts*
 
 ### Profile Workouts
-![Profile Workouts](screenshots/user_page_2.PNG)
+<img src="screenshots/user_page_2.PNG" width="300" alt="Profile Workouts">
 *Browse your workout history with detailed exercise information and progress tracking*
 
 ## 🏋️ Features
