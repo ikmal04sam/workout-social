@@ -36,6 +36,7 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type) VALUES
 ('Calf Raises', 'Standing calf raises', 'Legs', 'Bodyweight'),
 ('Leg Press', 'Machine leg press', 'Legs', 'Machine'),
 ('Lying Hamstring Curl', 'Lying hamstring curl on machine', 'Legs', 'Machine'),
+('Seated Hamstring Curls', 'Seated hamstring curl on machine', 'Legs', 'Machine'),
 ('Leg Extensions', 'Leg extension on machine', 'Legs', 'Machine'),
 
 -- Core
