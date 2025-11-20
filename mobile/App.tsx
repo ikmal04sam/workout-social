@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, StyleSheet, Image } from 'react-native';
 
 // Import your screens
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -25,11 +25,34 @@ const Stack = createStackNavigator();
 
 function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [showSplash, setShowSplash] = useState(true);
+  const [startTime] = useState(() => Date.now());
 
-  if (isLoading) {
+  useEffect(() => {
+    // Minimum splash screen display time (2 seconds)
+    const minDisplayTime = 2000;
+
+    if (!isLoading) {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, minDisplayTime - elapsed);
+
+      const timer = setTimeout(() => {
+        setShowSplash(false);
+      }, remaining);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, startTime]);
+
+  // Keep showing splash until both auth is loaded and minimum time has passed
+  if (isLoading || showSplash) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <Image 
+          source={require('./assets/icon.png')} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -114,6 +137,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
+  },
+  logo: {
+    width: 150,
+    height: 150,
   },
 });
