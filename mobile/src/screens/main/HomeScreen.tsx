@@ -54,6 +54,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [likingWorkoutId, setLikingWorkoutId] = useState<number | null>(null);
   const pulseAnimations = useRef<Record<number, Animated.Value>>({});
+  const isInitialMount = useRef(true);
 
   const loadWorkouts = useCallback(async () => {
     try {
@@ -92,6 +93,10 @@ export default function HomeScreen() {
     } finally {
       setIsLoading(false);
       setRefreshing(false);
+      // Mark that initial load is complete
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+      }
     }
   }, []);
 
@@ -213,12 +218,12 @@ export default function HomeScreen() {
       }
     >
       
-      {isLoading ? (
+      {isLoading && !isInitialMount.current ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Loading feed...</Text>
         </View>
-      ) : workouts.length === 0 ? (
+      ) : !isLoading && workouts.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No workouts yet</Text>
           <Text style={styles.emptySubtext}>
@@ -228,7 +233,7 @@ export default function HomeScreen() {
             Check out the Discover tab to find users to follow
           </Text>
         </View>
-      ) : (
+      ) : workouts.length > 0 ? (
         <View style={styles.content}>
           {workouts.map((workout, index) => {
             const profileImageUri = getProfileImageUri(workout.profile_pic);
@@ -472,7 +477,7 @@ export default function HomeScreen() {
             );
           })}
         </View>
-      )}
+      ) : null}
     </ScrollView>
   );
 }
