@@ -21,11 +21,13 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type) VALUES
 ('Lateral Raises', 'Dumbbell lateral raises', 'Shoulders', 'Dumbbell'),
 ('Front Raises', 'Dumbbell front raises', 'Shoulders', 'Dumbbell'),
 ('Rear Delt Flyes', 'Rear deltoid flyes', 'Shoulders', 'Dumbbell'),
+('Dumbbell Shrugs', 'Dumbbell shrugs for traps', 'Shoulders', 'Dumbbell'),
 
 -- Upper Body - Arms
 ('Bicep Curls', 'Dumbbell bicep curls', 'Biceps', 'Dumbbell'),
 ('Tricep Dips', 'Bodyweight tricep exercise', 'Triceps', 'Bodyweight'),
 ('Hammer Curls', 'Dumbbell hammer curls', 'Biceps', 'Dumbbell'),
+('Preacher Curl', 'Preacher curl on machine', 'Biceps', 'Machine'),
 ('Tricep Extensions', 'Overhead tricep extensions', 'Triceps', 'Dumbbell'),
 
 -- Lower Body
