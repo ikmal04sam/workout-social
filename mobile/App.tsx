@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Image } from 'react-native';
 
 // Import your screens
+import OnboardingScreen, { checkOnboardingStatus } from './src/screens/onboarding/OnboardingScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
 import MainTabNavigator from './src/navigation/MainTabNavigator';
@@ -26,9 +27,15 @@ const Stack = createStackNavigator();
 function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [startTime] = useState(() => Date.now());
 
   useEffect(() => {
+    // Check onboarding status
+    checkOnboardingStatus().then((completed) => {
+      setHasSeenOnboarding(completed);
+    });
+
     // Minimum splash screen display time (2 seconds)
     const minDisplayTime = 2000;
 
@@ -44,8 +51,8 @@ function AppNavigator() {
     }
   }, [isLoading, startTime]);
 
-  // Keep showing splash until both auth is loaded and minimum time has passed
-  if (isLoading || showSplash) {
+  // Keep showing splash until both auth is loaded, onboarding status is checked, and minimum time has passed
+  if (isLoading || showSplash || hasSeenOnboarding === null) {
     return (
       <View style={styles.loadingContainer}>
         <Image 
@@ -57,9 +64,17 @@ function AppNavigator() {
     );
   }
 
+  // Determine initial route
+  let initialRoute = "Login";
+  if (isAuthenticated) {
+    initialRoute = "Main";
+  } else if (!hasSeenOnboarding) {
+    initialRoute = "Onboarding";
+  }
+
   return (
     <Stack.Navigator 
-      initialRouteName={isAuthenticated ? "Main" : "Login"}
+      initialRouteName={initialRoute}
       screenOptions={{ headerShown: false }}
     >
       {isAuthenticated ? (
@@ -113,6 +128,7 @@ function AppNavigator() {
         </>
       ) : (
         <>
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
         </>
