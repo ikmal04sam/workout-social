@@ -9,8 +9,10 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
+  Image
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -37,14 +39,28 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <LinearGradient
+      colors={['#ffffff', '#f8f9fa', '#f0f2f5']}
+      style={styles.gradient}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../../../assets/icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.title}>Welcome Back!</Text>
+            <Text style={styles.subtitle}>Sign in to your account</Text>
           
           <View style={styles.form}>
             <View style={styles.inputContainer}>
@@ -103,27 +119,39 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
+    paddingVertical: 40,
   },
   content: {
     padding: 20,
     alignItems: 'center',
   },
+  logoContainer: {
+    marginBottom: 30,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 100,
+    height: 100,
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
+    color: '#1a1a1a',
   },
   subtitle: {
     fontSize: 16,
@@ -146,12 +174,20 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 16,
     color: '#333',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   errorContainer: {
     backgroundColor: '#ffebee',
@@ -165,7 +201,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B35',
     paddingHorizontal: 40,
     paddingVertical: 15,
     borderRadius: 25,
@@ -173,9 +209,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 50,
     justifyContent: 'center',
+    shadowColor: '#FF6B35',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   buttonDisabled: {
     backgroundColor: '#ccc',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonText: {
     color: 'white',
@@ -186,7 +232,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   linkText: {
-    color: '#007AFF',
+    color: '#FF6B35',
     fontSize: 14,
+    fontWeight: '500',
   },
 });
