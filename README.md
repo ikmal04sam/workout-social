@@ -70,7 +70,8 @@ A full-stack social fitness application that allows users to log workouts, track
 ## 🏋️ Features
 
 ### Core Functionality
-- **User Authentication**: Secure registration and login system
+- **User Authentication**: Secure registration and login system with enhanced UX
+- **Onboarding Flow**: Beautiful 4-screen onboarding experience for first-time users
 - **Workout Logging**: Create and track detailed workout sessions
 - **Exercise Library**: Comprehensive database of exercises with muscle groups and equipment types
 - **Set Tracking**: Log individual sets with reps, weight, and rest time
@@ -79,11 +80,13 @@ A full-stack social fitness application that allows users to log workouts, track
 
 ### Mobile App (React Native/Expo)
 - **Cross-platform**: Works on both iOS and Android
+- **Onboarding Experience**: Interactive 4-screen onboarding with gradient backgrounds and smooth animations
+- **Enhanced Login Screen**: Modern design with gradient background, icons, password visibility toggle, inline validation, and haptic feedback
 - **Tab Navigation**: Home, Progress, and Profile screens
 - **Discover & Follow**: Search for users, follow them, and view their workouts
 - **Progress Tracking**: Profile dashboard with weekly duration chart and exercise analytics
 - **Exercise Analytics**: Progress tab with muscle-group browsing and per-exercise history (heaviest weight, sessions, etc.)
-- **Authentication Flow**: Seamless login/register experience
+- **Authentication Flow**: Seamless login/register experience with auto-focus navigation
 - **Real-time Updates**: Live feed of workouts from followed users
 
 ### Backend API (Node.js/Express)
@@ -98,6 +101,8 @@ A full-stack social fitness application that allows users to log workouts, track
 - **React Native** with Expo
 - **React Navigation** for navigation
 - **React Native SVG** for custom progress charts
+- **Expo Linear Gradient** for beautiful gradient backgrounds
+- **Expo Haptics** for tactile feedback
 - **TypeScript** for type safety
 - **AsyncStorage** for local data persistence
 
