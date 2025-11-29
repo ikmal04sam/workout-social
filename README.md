@@ -30,7 +30,7 @@ A full-stack social fitness application that allows users to log workouts, track
 
 **Progress Tracking**
 <br>
-<img src="screenshots/progess_page.PNG" width="250" alt="Progress Page">
+<img src="screenshots/progress_page.PNG" width="250" alt="Progress Page">
 <br>
 *Browse exercises by muscle group and track your progress over time*
 
