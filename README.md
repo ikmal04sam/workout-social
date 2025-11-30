@@ -30,7 +30,7 @@ A full-stack social fitness application that allows users to log workouts, track
 
 **Progress Tracking**
 <br>
-<img src="screenshots/progress_page.PNG" width="250" alt="Progress Page">
+<img src="screenshots/progess_page.PNG" width="250" alt="Progress Page">
 <br>
 *Browse exercises by muscle group and track your progress over time*
 
@@ -70,7 +70,7 @@ A full-stack social fitness application that allows users to log workouts, track
 
 **Login Screen**
 <br>
-<img src="screenshots/login_screen.png" width="250" alt="Login Screen">
+<img src="screenshots/login_screen.PNG" width="250" alt="Login Screen">
 <br>
 *Modern login experience with gradient background, icons, password visibility toggle, and inline validation*
 
