@@ -32,9 +32,11 @@ function AppNavigator() {
 
   useEffect(() => {
     // Check onboarding status
-    checkOnboardingStatus().then((completed) => {
-      setHasSeenOnboarding(completed);
-    });
+    // TEMPORARY: Force onboarding to show for testing
+    // checkOnboardingStatus().then((completed) => {
+    //   setHasSeenOnboarding(completed);
+    // });
+    setHasSeenOnboarding(false); // Force show onboarding
 
     // Minimum splash screen display time (2 seconds)
     const minDisplayTime = 2000;
