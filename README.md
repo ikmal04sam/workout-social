@@ -65,6 +65,20 @@ A full-stack social fitness application that allows users to log workouts, track
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+**Login Screen**
+<br>
+<img src="screenshots/login_screen.png" width="250" alt="Login Screen">
+<br>
+*Modern login experience with gradient background, icons, password visibility toggle, and inline validation*
+
+</td>
+<td width="50%">
+
+</td>
+</tr>
 </table>
 
 ## 🏋️ Features
