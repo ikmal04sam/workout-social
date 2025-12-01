@@ -490,6 +490,15 @@ export default function ProfileScreen() {
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
+        {/* Logout Button */}
+        <TouchableOpacity 
+          style={[styles.button, styles.logoutButton, authLoading && styles.buttonDisabled]}
+          onPress={handleLogout}
+          disabled={authLoading}
+        >
+          <Text style={styles.buttonText}>Logout</Text>
+        </TouchableOpacity>
+
         {/* Weekly Activity Chart */}
         <View style={[styles.chartCard, styles.chartCardSpacing]}>
           <View style={styles.chartHeader}>
@@ -728,14 +737,6 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-        
-        <TouchableOpacity 
-          style={[styles.button, authLoading && styles.buttonDisabled]}
-          onPress={handleLogout}
-          disabled={authLoading}
-        >
-          <Text style={styles.buttonText}>Logout</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -955,15 +956,17 @@ const styles = StyleSheet.create({
   },
   editButton: {
     backgroundColor: '#007AFF',
-    paddingHorizontal: 30,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     borderRadius: 25,
     marginTop: 12,
+    alignItems: 'flex-start',
   },
   editButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'left',
   },
   workoutsSection: {
     marginTop: 24,
@@ -1172,10 +1175,13 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#FF3B30',
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
     paddingVertical: 15,
     borderRadius: 25,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  logoutButton: {
+    marginTop: 12,
   },
   buttonDisabled: {
     backgroundColor: '#ccc',
@@ -1184,5 +1190,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'left',
   },
 });
