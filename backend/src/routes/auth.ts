@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import pool from '../db';
 import { authenticateToken } from '../middleware/auth';
 
@@ -423,6 +424,137 @@ router.get('/followers', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get followers list error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Request password reset endpoint
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({ 
+        error: 'Email is required' 
+      });
+    }
+
+    // Find user by email
+    const result = await pool.query(
+      'SELECT id, email, username FROM users WHERE email = $1',
+      [email]
+    );
+
+    // Always return success message to prevent email enumeration
+    // In production, you would send an email here
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpires = new Date();
+      resetTokenExpires.setHours(resetTokenExpires.getHours() + 1); // Token expires in 1 hour
+
+      // Store reset token in database
+      await pool.query(
+        'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3',
+        [resetToken, resetTokenExpires, user.id]
+      );
+
+      // In production, send email with reset link
+      // For now, we'll log it (in development only)
+      console.log('Password reset token for', user.email, ':', resetToken);
+      console.log('Token expires at:', resetTokenExpires);
+    }
+
+    // Always return success to prevent email enumeration
+    res.json({
+      message: 'If an account with that email exists, a password reset token has been generated. Check your email for instructions.'
+    });
+
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    // Log more details for debugging
+    if (error.code) {
+      console.error('Database error code:', error.code);
+    }
+    if (error.message) {
+      console.error('Error message:', error.message);
+    }
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Reset password endpoint
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Validate required fields
+    if (!token || !newPassword) {
+      return res.status(400).json({ 
+        error: 'Token and new password are required' 
+      });
+    }
+
+    // Validate password strength (minimum 6 characters)
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        error: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    // Find user with valid reset token
+    const result = await pool.query(
+      'SELECT id, reset_token_expires FROM users WHERE reset_token = $1',
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ 
+        error: 'Invalid or expired reset token' 
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Check if token has expired
+    if (new Date() > new Date(user.reset_token_expires)) {
+      return res.status(400).json({ 
+        error: 'Reset token has expired. Please request a new one.' 
+      });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password and clear reset token
+    await pool.query(
+      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+
+    res.json({
+      message: 'Password has been reset successfully. You can now login with your new password.'
+    });
+
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    // Log more details for debugging
+    if (error.code) {
+      console.error('Database error code:', error.code);
+    }
+    if (error.message) {
+      console.error('Error message:', error.message);
+    }
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

@@ -226,6 +226,21 @@ class ApiService {
     await this.removeToken();
   }
 
+  // Password reset methods
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    return await this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    return await this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+  }
+
   // Check if user is authenticated
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();

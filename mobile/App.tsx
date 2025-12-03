@@ -8,6 +8,8 @@ import { View, StyleSheet, Image } from 'react-native';
 import OnboardingScreen, { checkOnboardingStatus } from './src/screens/onboarding/OnboardingScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
+import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import MainTabNavigator from './src/navigation/MainTabNavigator';
 import WorkoutDetailScreen from './src/screens/workout/WorkoutDetailScreen';
 import EditWorkoutScreen from './src/screens/workout/EditWorkoutScreen';
@@ -131,6 +133,8 @@ function AppNavigator() {
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </>
       )}
     </Stack.Navigator>

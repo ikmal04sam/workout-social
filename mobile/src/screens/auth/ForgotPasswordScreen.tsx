@@ -16,85 +16,83 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../../contexts/AuthContext';
+import { apiService } from '../../services/api';
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const navigation = useNavigation();
-  const { login, isLoading, error, clearError } = useAuth();
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{email?: string}>({});
   
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{username?: string; password?: string}>({});
-  
-  const passwordInputRef = useRef<TextInput>(null);
-  const usernameInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<TextInput>(null);
 
-  const validateField = (field: 'username' | 'password', value: string) => {
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateField = (value: string) => {
     const errors = { ...fieldErrors };
     
-    if (field === 'username') {
-      if (!value.trim()) {
-        errors.username = 'Username or email is required';
-      } else {
-        delete errors.username;
-      }
-    } else if (field === 'password') {
-      if (!value.trim()) {
-        errors.password = 'Password is required';
-      } else {
-        delete errors.password;
-      }
+    if (!value.trim()) {
+      errors.email = 'Email is required';
+    } else if (!validateEmail(value.trim())) {
+      errors.email = 'Please enter a valid email address';
+    } else {
+      delete errors.email;
     }
     
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleUsernameChange = (text: string) => {
-    setUsername(text);
-    if (fieldErrors.username) {
-      validateField('username', text);
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (fieldErrors.email) {
+      validateField(text);
     }
-    clearError();
+    setError('');
   };
 
-  const handlePasswordChange = (text: string) => {
-    setPassword(text);
-    if (fieldErrors.password) {
-      validateField('password', text);
-    }
-    clearError();
-  };
-
-  const handleUsernameSubmit = () => {
-    passwordInputRef.current?.focus();
-  };
-
-  const handleLogin = async () => {
-    // Validate all fields
-    const isUsernameValid = validateField('username', username);
-    const isPasswordValid = validateField('password', password);
-
-    if (!isUsernameValid || !isPasswordValid) {
+  const handleRequestReset = async () => {
+    // Validate email
+    if (!validateField(email)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     try {
+      setIsLoading(true);
+      setError('');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      clearError();
-      await login(username.trim(), password);
-      // Navigation will be handled by AuthContext
-    } catch (error) {
+      
+      await apiService.requestPasswordReset(email.trim());
+      
+      setSuccess(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Show success message with instructions
+      Alert.alert(
+        'Reset Token Generated',
+        'A password reset token has been generated. In development mode, check the server console for the token. In production, you would receive this via email.\n\nPlease navigate to the Reset Password screen to enter your token and new password.',
+        [
+          {
+            text: 'Go to Reset Password',
+            onPress: () => {
+              navigation.navigate('ResetPassword' as never, { email: email.trim() } as never);
+            }
+          },
+          { text: 'OK' }
+        ]
+      );
+    } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      // Error is already set in context
+      setError(err.message || 'Failed to request password reset. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleForgotPassword = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    navigation.navigate('ForgotPassword' as never);
   };
 
   return (
@@ -111,6 +109,13 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </TouchableOpacity>
+
             <View style={styles.logoContainer}>
               <Image 
                 source={require('../../../assets/icon.png')} 
@@ -118,13 +123,13 @@ export default function LoginScreen() {
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.title}>Welcome Back!</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
+            <Text style={styles.title}>Forgot Password?</Text>
+            <Text style={styles.subtitle}>Enter your email to receive a password reset token</Text>
           
           <View style={styles.form}>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Username or Email</Text>
-              <View style={[styles.inputWrapper, fieldErrors.username && styles.inputError]}>
+              <Text style={styles.label}>Email</Text>
+              <View style={[styles.inputWrapper, fieldErrors.email && styles.inputError]}>
                 <Ionicons 
                   name="mail-outline" 
                   size={20} 
@@ -132,101 +137,59 @@ export default function LoginScreen() {
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  ref={usernameInputRef}
+                  ref={emailInputRef}
                   style={[styles.input, styles.inputWithIcon]}
-                  value={username}
-                  onChangeText={handleUsernameChange}
-                  placeholder="Enter your username or email"
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  placeholder="Enter your email"
                   placeholderTextColor="#999"
+                  keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
-                  returnKeyType="next"
-                  onSubmitEditing={handleUsernameSubmit}
-                  blurOnSubmit={false}
+                  returnKeyType="send"
+                  onSubmitEditing={handleRequestReset}
                 />
               </View>
-              {fieldErrors.username && (
-                <Text style={styles.fieldErrorText}>{fieldErrors.username}</Text>
+              {fieldErrors.email && (
+                <Text style={styles.fieldErrorText}>{fieldErrors.email}</Text>
               )}
             </View>
-            
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <View style={[styles.inputWrapper, fieldErrors.password && styles.inputError]}>
-                <Ionicons 
-                  name="lock-closed-outline" 
-                  size={20} 
-                  color="#999" 
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  ref={passwordInputRef}
-                  style={[styles.input, styles.inputWithIcon]}
-                  value={password}
-                  onChangeText={handlePasswordChange}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogin}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowPassword(!showPassword);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={styles.eyeIcon}
-                  disabled={!password}
-                >
-                  <Ionicons 
-                    name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                    size={20} 
-                    color={password ? "#666" : "#ccc"} 
-                  />
-                </TouchableOpacity>
-              </View>
-              {fieldErrors.password && (
-                <Text style={styles.fieldErrorText}>{fieldErrors.password}</Text>
-              )}
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.forgotPasswordButton}
-              onPress={handleForgotPassword}
-              disabled={isLoading}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
             
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
+
+            {success && (
+              <View style={styles.successContainer}>
+                <Ionicons name="checkmark-circle" size={20} color="#4caf50" style={{ marginRight: 8 }} />
+                <Text style={styles.successText}>
+                  Reset token generated! Check the server console for the token.
+                </Text>
+              </View>
+            )}
             
             <TouchableOpacity 
               style={[styles.button, isLoading && styles.buttonDisabled]}
-              onPress={handleLogin}
+              onPress={handleRequestReset}
               disabled={isLoading}
             >
               {isLoading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={styles.buttonText}>Request Reset Token</Text>
               )}
             </TouchableOpacity>
           </View>
           
           <TouchableOpacity 
             style={styles.linkButton}
-            onPress={() => navigation.navigate('Register' as never)}
+            onPress={() => navigation.navigate('ResetPassword' as never)}
             disabled={isLoading}
           >
-            <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+            <Text style={styles.linkText}>Already have a token? Reset Password</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -251,6 +214,13 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
+  backButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    zIndex: 1,
+    padding: 8,
+  },
   logoContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -269,6 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 40,
+    textAlign: 'center',
   },
   form: {
     width: '100%',
@@ -316,27 +287,11 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: '#c62828',
   },
-  eyeIcon: {
-    padding: 8,
-    marginRight: 8,
-  },
   fieldErrorText: {
     color: '#c62828',
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
-  },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginTop: -10,
-    marginBottom: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  forgotPasswordText: {
-    color: '#FF6B35',
-    fontSize: 14,
-    fontWeight: '500',
   },
   errorContainer: {
     backgroundColor: '#ffebee',
@@ -348,6 +303,19 @@ const styles = StyleSheet.create({
     color: '#c62828',
     fontSize: 14,
     textAlign: 'center',
+  },
+  successContainer: {
+    backgroundColor: '#e8f5e9',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  successText: {
+    color: '#2e7d32',
+    fontSize: 14,
+    flex: 1,
   },
   button: {
     backgroundColor: '#FF6B35',
@@ -386,3 +354,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+
