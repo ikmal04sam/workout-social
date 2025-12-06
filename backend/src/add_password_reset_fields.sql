@@ -6,3 +6,5 @@ ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;
 -- Create index on reset_token for faster lookups
 CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
 
+
+
