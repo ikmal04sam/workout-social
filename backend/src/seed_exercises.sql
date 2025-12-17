@@ -14,6 +14,7 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type) VALUES
 ('Bent-over Row', 'Barbell bent-over row', 'Back', 'Barbell'),
 ('Deadlift', 'Full body compound movement', 'Back', 'Barbell'),
 ('Seated Row', 'Cable seated row', 'Back', 'Cable'),
+('Dumbbell Rows', 'Bent-over dumbbell rows for back', 'Back', 'Dumbbell'),
 
 -- Upper Body - Shoulders
 ('Overhead Press', 'Barbell overhead press', 'Shoulders', 'Barbell'),
