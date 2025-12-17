@@ -30,6 +30,7 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type) VALUES
 ('Preacher Curl', 'Preacher curl on machine', 'Biceps', 'Machine'),
 ('Tricep Extensions', 'Overhead tricep extensions', 'Triceps', 'Dumbbell'),
 ('Overhead Tricep Extensions', 'Overhead tricep extensions with dumbbell or cable', 'Triceps', 'Dumbbell'),
+('Tricep Kickbacks', 'Tricep kickbacks with dumbbell', 'Triceps', 'Dumbbell'),
 
 -- Lower Body
 ('Squats', 'Bodyweight squats', 'Legs', 'Bodyweight'),
