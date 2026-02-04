@@ -5,3 +5,6 @@ INSERT INTO exercises (name, description, muscle_group, equipment_type)
 VALUES ('Tricep Kickbacks', 'Tricep kickbacks with dumbbell', 'Triceps', 'Dumbbell')
 ON CONFLICT DO NOTHING;
 
+
+
+
