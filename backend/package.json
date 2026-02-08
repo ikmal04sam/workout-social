@@ -7,7 +7,12 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "db:setup": "bash scripts/setup-db.sh",
+    "db:schema": "psql ${DB_NAME:-workout_social} -f src/db.sql",
+    "db:seed": "psql ${DB_NAME:-workout_social} -f src/seed_exercises.sql -f src/seed_test_users.sql",
+    "db:migrate": "psql ${DB_NAME:-workout_social} -f src/migrate_profile_pic.sql -f src/add_password_reset_fields.sql",
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "Thomas Comeau",
@@ -25,10 +30,15 @@
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.9.1",
     "@types/pg": "^8.15.5",
+    "@types/supertest": "^6.0.2",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.10",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

@@ -162,15 +162,21 @@ JWT_SECRET=your_jwt_secret
 
 4. Set up the database:
 ```bash
+# Option A: Run the full setup script (recommended)
+npm run db:setup
+
+# Option B: Run steps manually
 # Create the database
 createdb workout_social
 
 # Run the schema
-psql workout_social < src/db.sql
+npm run db:schema
 
-# Seed with sample data (optional)
-psql workout_social < src/seed_exercises.sql
-psql workout_social < src/seed_test_users.sql
+# Run migrations
+npm run db:migrate
+
+# Seed with sample data
+npm run db:seed
 ```
 
 5. Start the development server:
@@ -180,6 +186,11 @@ npm run dev
 
 The API will be available at `http://localhost:3000`
 
+6. Run API tests (requires database to be set up):
+```bash
+npm test
+```
+
 ### Mobile App Setup
 
 1. Navigate to the mobile directory:
@@ -187,7 +198,12 @@ The API will be available at `http://localhost:3000`
 cd mobile
 ```
 
-2. Install dependencies:
+2. Run setup script (installs dependencies, creates .env.example):
+```bash
+npm run setup
+```
+
+Or install manually:
 ```bash
 npm install
 ```
@@ -207,6 +223,11 @@ npm run android
 
 # Web (for testing)
 npm run web
+```
+
+5. Run tests:
+```bash
+npm test
 ```
 
 ## 📊 Database Schema
