@@ -6,9 +6,9 @@ const mockFetch = jest.fn();
 beforeEach(() => {
   global.fetch = mockFetch;
   mockFetch.mockReset();
-  jest.mocked(AsyncStorage.getItem).mockResolvedValue(null);
-  jest.mocked(AsyncStorage.setItem).mockResolvedValue(undefined);
-  jest.mocked(AsyncStorage.removeItem).mockResolvedValue(undefined);
+  (jest.mocked(AsyncStorage.getItem) as { mockResolvedValue: (v: unknown) => void; mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValue(null);
+  (jest.mocked(AsyncStorage.setItem) as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue(undefined);
+  (jest.mocked(AsyncStorage.removeItem) as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue(undefined);
 });
 
 describe('ApiService', () => {
@@ -84,7 +84,7 @@ describe('ApiService', () => {
 
   describe('getProfile', () => {
     it('calls GET /auth/profile with Authorization header when token exists', async () => {
-      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce('test-token');
+      (jest.mocked(AsyncStorage.getItem) as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce('test-token');
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ user: { id: 1, username: 'test' } }),
@@ -106,7 +106,7 @@ describe('ApiService', () => {
 
   describe('createWorkout', () => {
     it('calls POST /workouts with workout data', async () => {
-      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce('token');
+      (jest.mocked(AsyncStorage.getItem) as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce('token');
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ message: 'Created', workout: { id: 1, title: 'Morning Run' } }),
