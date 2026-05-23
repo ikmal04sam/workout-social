@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import exerciseRoutes from './routes/exercises';
 import workoutRoutes from './routes/workouts';
 import socialRoutes from './routes/social';
+import outdoorRoutes from './routes/outdoor';
 
 const app = express();
 
@@ -31,5 +32,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/exercises', exerciseRoutes);
 app.use('/api/workouts', workoutRoutes);
 app.use('/api/social', socialRoutes);
+app.use('/api/outdoor', outdoorRoutes);
 
 export { app };
