@@ -23,7 +23,7 @@ router.get('/', optionalAuth, async (req, res) => {
       conditions.push(`equipment_type = $${queryParams.length + 1}`);
       queryParams.push(equipment_type);
     }
-    
+
     if (search) {
       conditions.push(`(name ILIKE $${queryParams.length + 1} OR description ILIKE $${queryParams.length + 1})`);
       queryParams.push(`%${search}%`);

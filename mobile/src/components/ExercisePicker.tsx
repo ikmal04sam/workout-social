@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { apiService } from '../services/api';
+import ExerciseTutorialButton from './ExerciseTutorialButton';
 
 interface Exercise {
   id: number;
@@ -126,6 +127,12 @@ export default function ExercisePicker({ muscleGroup, selectedExercise, onSelect
                 {exercise.description}
               </Text>
             )}
+            <ExerciseTutorialButton
+              exerciseName={exercise.name}
+              muscleGroup={exercise.muscle_group}
+              equipmentType={exercise.equipment_type}
+              style={styles.tutorialButton}
+            />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -223,5 +230,8 @@ const styles = StyleSheet.create({
   },
   selectedExerciseDescription: {
     color: '#007AFF',
+  },
+  tutorialButton: {
+    marginTop: 10,
   },
 });

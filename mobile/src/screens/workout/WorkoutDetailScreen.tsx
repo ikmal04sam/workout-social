@@ -14,6 +14,7 @@ import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navig
 import { apiService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import DateDisplay from '../../components/DateDisplay';
+import ExerciseTutorialButton from '../../components/ExerciseTutorialButton';
 
 type WorkoutDetailRouteParams = {
   WorkoutDetail: {
@@ -226,6 +227,13 @@ export default function WorkoutDetailScreen() {
                     {exercise.exercise_description}
                   </Text>
                 )}
+
+                <ExerciseTutorialButton
+                  exerciseName={exercise.exercise_name}
+                  muscleGroup={exercise.muscle_group}
+                  equipmentType={exercise.equipment_type}
+                  style={styles.tutorialButton}
+                />
 
                 {/* Sets */}
                 {exercise.sets && exercise.sets.length > 0 && (
@@ -452,6 +460,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 20,
   },
+  tutorialButton: {
+    marginBottom: 12,
+  },
   setsContainer: {
     marginTop: 8,
   },
@@ -496,4 +507,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

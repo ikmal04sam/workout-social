@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiService, Exercise } from '../../services/api';
 import ExerciseSearchModal from '../../components/ExerciseSearchModal';
 import SetInputForm from '../../components/SetInputForm';
+import ExerciseTutorialButton from '../../components/ExerciseTutorialButton';
 
 type EditWorkoutRouteParams = {
   EditWorkout: {
@@ -488,6 +489,12 @@ export default function EditWorkoutScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
+                <ExerciseTutorialButton
+                  exerciseName={exercise.exercise_name}
+                  muscleGroup={exercise.muscle_group}
+                  equipmentType={exercise.equipment_type}
+                  style={styles.exerciseTutorialButton}
+                />
                 <View style={styles.setsPreview}>
                   {exercise.sets.filter(s => !s.toDelete).map((set, setIdx) => (
                     <Text key={setIdx} style={styles.setPreviewText}>
@@ -523,6 +530,12 @@ export default function EditWorkoutScreen() {
                       <Text style={styles.changeButton}>Change</Text>
                     </TouchableOpacity>
                   </View>
+                  <ExerciseTutorialButton
+                    exerciseName={selectedExercise.name}
+                    muscleGroup={selectedExercise.muscle_group}
+                    equipmentType={selectedExercise.equipment_type}
+                    style={styles.exerciseTutorialButton}
+                  />
                   <SetInputForm
                     sets={currentSets.filter(s => !s.toDelete).map(s => ({
                       set_number: s.set_number,
@@ -707,6 +720,10 @@ const styles = StyleSheet.create({
   exerciseMeta: {
     fontSize: 12,
     color: '#666',
+  },
+  exerciseTutorialButton: {
+    marginTop: 2,
+    marginBottom: 10,
   },
   exerciseActions: {
     flexDirection: 'row',

@@ -11,6 +11,7 @@ import RegisterScreen from './src/screens/auth/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import MainTabNavigator from './src/navigation/MainTabNavigator';
+import OutdoorScreen from './src/screens/main/OutdoorScreen';
 import WorkoutDetailScreen from './src/screens/workout/WorkoutDetailScreen';
 import EditWorkoutScreen from './src/screens/workout/EditWorkoutScreen';
 import CommentsScreen from './src/screens/workout/CommentsScreen';
@@ -82,6 +83,11 @@ function AppNavigator() {
       {isAuthenticated ? (
         <>
           <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen
+            name="Outdoor"
+            component={OutdoorScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen 
             name="WorkoutDetail" 
             component={WorkoutDetailScreen}
