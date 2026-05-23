@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { apiService, Exercise } from '../services/api';
+import ExerciseTutorialButton from './ExerciseTutorialButton';
 
 interface ExerciseSearchModalProps {
   visible: boolean;
@@ -122,6 +123,14 @@ export default function ExerciseSearchModal({ visible, onClose, onSelect }: Exer
                 {exercise.description ? (
                   <Text style={styles.itemDescription} numberOfLines={2}>{exercise.description}</Text>
                 ) : null}
+                <View style={styles.itemActions}>
+                  <ExerciseTutorialButton
+                    exerciseName={exercise.name}
+                    muscleGroup={exercise.muscle_group}
+                    equipmentType={exercise.equipment_type}
+                  />
+                  <Text style={styles.selectHint}>Tap card to select</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -235,6 +244,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  itemActions: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  selectHint: {
+    flex: 1,
+    color: '#8a8a8a',
+    fontSize: 12,
+    textAlign: 'right',
+  },
 });
-
-

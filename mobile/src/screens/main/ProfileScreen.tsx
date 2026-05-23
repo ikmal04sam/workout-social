@@ -490,6 +490,23 @@ export default function ProfileScreen() {
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.outdoorCard}
+          onPress={() => navigation.navigate('Outdoor' as never)}
+          activeOpacity={0.75}
+        >
+          <View style={styles.outdoorIcon}>
+            <Ionicons name="partly-sunny" size={24} color="#F59E0B" />
+          </View>
+          <View style={styles.outdoorContent}>
+            <Text style={styles.outdoorTitle}>Outdoor Planner</Text>
+            <Text style={styles.outdoorSubtitle}>
+              Check weather and nearby workout spots
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+
         {/* Logout Button */}
         <TouchableOpacity 
           style={[styles.button, styles.logoutButton, authLoading && styles.buttonDisabled]}
@@ -967,6 +984,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'left',
+  },
+  outdoorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  outdoorIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#fff7ed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  outdoorContent: {
+    flex: 1,
+  },
+  outdoorTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 3,
+  },
+  outdoorSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
   },
   workoutsSection: {
     marginTop: 24,

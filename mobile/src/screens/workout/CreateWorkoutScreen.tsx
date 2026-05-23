@@ -23,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 import { apiService, Exercise } from '../../services/api';
 import ExerciseSearchModal from '../../components/ExerciseSearchModal';
 import SetInputForm from '../../components/SetInputForm';
+import ExerciseTutorialButton from '../../components/ExerciseTutorialButton';
 
 interface WorkoutSet {
   set_number: number;
@@ -623,6 +624,12 @@ export default function CreateWorkoutScreen() {
                   <Ionicons name="close-circle" size={24} color="#FF3B30" />
                 </TouchableOpacity>
               </View>
+              <ExerciseTutorialButton
+                exerciseName={exercise.exercise_name}
+                muscleGroup={exercise.muscle_group}
+                equipmentType={exercise.equipment_type}
+                style={styles.exerciseTutorialButton}
+              />
               <View style={styles.setsPreview}>
                 {exercise.sets.map((set, setIdx) => (
                   <View key={setIdx} style={styles.setPreviewItem}>
@@ -677,6 +684,13 @@ export default function CreateWorkoutScreen() {
                   <Ionicons name="close-circle" size={24} color="#999" />
                 </TouchableOpacity>
               </View>
+
+              <ExerciseTutorialButton
+                exerciseName={selectedExercise.name}
+                muscleGroup={selectedExercise.muscle_group}
+                equipmentType={selectedExercise.equipment_type}
+                style={styles.exerciseTutorialButton}
+              />
 
               <SetInputForm
                 sets={currentSets}
@@ -1063,6 +1077,10 @@ const styles = StyleSheet.create({
     color: '#4338ca',
     textTransform: 'capitalize',
   },
+  exerciseTutorialButton: {
+    marginTop: 10,
+    marginBottom: 4,
+  },
   exerciseSetsCount: {
     fontSize: 13,
     color: '#6b7280',
@@ -1250,4 +1268,3 @@ const styles = StyleSheet.create({
     height: 200,
   },
 });
-

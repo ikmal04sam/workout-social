@@ -1,14 +1,14 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
-import HomeScreen from '../screens/main/HomeScreen';
-import DiscoverScreen from '../screens/main/DiscoverScreen';
-import ProgressScreen from '../screens/progress/ProgressScreen';
-import ProfileScreen from '../screens/main/ProfileScreen';
-import CreateWorkoutScreen from '../screens/workout/CreateWorkoutScreen';
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Text, View, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
+import HomeScreen from "../screens/main/HomeScreen";
+import DiscoverScreen from "../screens/main/DiscoverScreen";
+import ProgressScreen from "../screens/progress/ProgressScreen";
+import ProfileScreen from "../screens/main/ProfileScreen";
+import CreateWorkoutScreen from "../screens/workout/CreateWorkoutScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -19,8 +19,9 @@ function DiscoverHeaderButton() {
   return (
     <TouchableOpacity
       style={headerStyles.searchButton}
-      onPress={() => navigation.navigate('Discover' as never)}
+      onPress={() => navigation.navigate("Discover" as never)}
       activeOpacity={0.7}
+      accessibilityLabel="Discover"
     >
       <Ionicons name="search" size={18} color="#007AFF" />
     </TouchableOpacity>
@@ -36,23 +37,23 @@ function ProfileHeaderButton() {
     <TouchableOpacity
       style={headerStyles.profileButton}
       onPress={() => {
-        navigation.navigate('You' as never);
+        navigation.navigate("You" as never);
       }}
       activeOpacity={0.7}
     >
       {user?.profile_pic ? (
         <Image
           source={{
-            uri: user.profile_pic.startsWith('data:') 
-              ? user.profile_pic 
-              : `data:image/jpeg;base64,${user.profile_pic}`
+            uri: user.profile_pic.startsWith("data:")
+              ? user.profile_pic
+              : `data:image/jpeg;base64,${user.profile_pic}`,
           }}
           style={headerStyles.profilePic}
         />
       ) : (
         <View style={headerStyles.profilePicPlaceholder}>
           <Text style={headerStyles.profilePicText}>
-            {user?.username?.charAt(0).toUpperCase() || '?'}
+            {user?.username?.charAt(0).toUpperCase() || "?"}
           </Text>
         </View>
       )}
@@ -64,13 +65,13 @@ export default function MainTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#FF6B35',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: "#FF6B35",
+        tabBarInactiveTintColor: "#666",
         tabBarStyle: {
           height: 85,
           paddingBottom: 25,
           paddingTop: 8,
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.08,
           shadowRadius: 6,
@@ -78,24 +79,24 @@ export default function MainTabNavigator() {
         },
         headerShown: true,
         headerStyle: {
-          backgroundColor: 'white',
-          shadowColor: '#000',
+          backgroundColor: "white",
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.1,
           shadowRadius: 2,
           elevation: 3,
         },
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
           fontSize: 18,
         },
       }}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{
-          headerTitle: 'Your Feed',
+          headerTitle: "Your Feed",
           headerLeft: () => <DiscoverHeaderButton />,
           headerLeftContainerStyle: {
             paddingLeft: 16,
@@ -104,28 +105,28 @@ export default function MainTabNavigator() {
           headerRightContainerStyle: {
             paddingRight: 16,
           },
-          tabBarLabel: 'Home',
+          tabBarLabel: "Home",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
-      <Tab.Screen 
-        name="Discover" 
+      <Tab.Screen
+        name="Discover"
         component={DiscoverScreen}
         options={{
-          tabBarLabel: 'Discover',
+          tabBarLabel: "Discover",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" size={size} color={color} />
           ),
         }}
       />
-      <Tab.Screen 
-        name="Record" 
+      <Tab.Screen
+        name="Record"
         component={CreateWorkoutScreen}
         options={{
           headerShown: false,
-          tabBarLabel: '',
+          tabBarLabel: "",
           tabBarIcon: () => (
             <View style={styles.recordFab} accessibilityLabel="Create workout">
               <Ionicons name="add" size={32} color="white" />
@@ -133,21 +134,21 @@ export default function MainTabNavigator() {
           ),
         }}
       />
-      <Tab.Screen 
-        name="Progress" 
+      <Tab.Screen
+        name="Progress"
         component={ProgressScreen}
         options={{
-          tabBarLabel: 'Progress',
+          tabBarLabel: "Progress",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart" size={size} color={color} />
           ),
         }}
       />
-      <Tab.Screen 
-        name="You" 
+      <Tab.Screen
+        name="You"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'You',
+          tabBarLabel: "You",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -162,11 +163,11 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 18,
-    backgroundColor: '#007AFF',
-    shadowColor: '#000',
+    backgroundColor: "#007AFF",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 6,
@@ -183,28 +184,28 @@ const headerStyles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
   },
   profilePicPlaceholder: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
   },
   profilePicText: {
-    color: 'white',
+    color: "white",
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   searchButton: {
     width: 36,
     height: 36,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f1f4ff',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f4ff",
     borderRadius: 18,
     marginBottom: 0,
     marginTop: -6,

@@ -1,7 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Base URL for your backend API
-const BASE_URL = 'http://10.0.0.155:3000/api';
+const BASE_URL = "http://192.168.0.13:3000/api";
+//ip address device if using real device
+//ip 10.0.2.2 if using emulator
 
 // Types for API responses
 export interface User {
@@ -114,6 +116,49 @@ export interface ExerciseDetails {
   equipment_type: string;
 }
 
+export interface OutdoorWeather {
+  source: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    timezone?: string;
+  };
+  current: {
+    time?: string;
+    temperature: number;
+    apparent_temperature?: number;
+    humidity?: number;
+    precipitation?: number;
+    precipitation_probability?: number;
+    wind_speed: number;
+    uv_index: number;
+    weather_code?: number;
+    weather: string;
+  };
+  workout: {
+    score: number;
+    suggestion: string;
+  };
+  hourly: Array<{
+    time: string;
+    temperature_2m?: number;
+    precipitation_probability?: number;
+    weather_code?: number;
+    wind_speed_10m?: number;
+    uv_index?: number;
+  }>;
+}
+
+export interface OutdoorPlace {
+  id: string;
+  name: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  map_url?: string | null;
+}
+
 // API service class
 class ApiService {
   private baseUrl: string;
@@ -125,18 +170,18 @@ class ApiService {
   // Generic request method
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const defaultHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
     // Add authorization header if token exists
     const token = await this.getToken();
     if (token) {
-      defaultHeaders['Authorization'] = `Bearer ${token}`;
+      defaultHeaders["Authorization"] = `Bearer ${token}`;
     }
 
     const config: RequestInit = {
@@ -149,15 +194,17 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`,
+        );
       }
 
       return await response.json();
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error("API request failed:", error);
       throw error;
     }
   }
@@ -165,33 +212,33 @@ class ApiService {
   // Token management
   async getToken(): Promise<string | null> {
     try {
-      return await AsyncStorage.getItem('auth_token');
+      return await AsyncStorage.getItem("auth_token");
     } catch (error) {
-      console.error('Error getting token:', error);
+      console.error("Error getting token:", error);
       return null;
     }
   }
 
   async setToken(token: string): Promise<void> {
     try {
-      await AsyncStorage.setItem('auth_token', token);
+      await AsyncStorage.setItem("auth_token", token);
     } catch (error) {
-      console.error('Error setting token:', error);
+      console.error("Error setting token:", error);
     }
   }
 
   async removeToken(): Promise<void> {
     try {
-      await AsyncStorage.removeItem('auth_token');
+      await AsyncStorage.removeItem("auth_token");
     } catch (error) {
-      console.error('Error removing token:', error);
+      console.error("Error removing token:", error);
     }
   }
 
   // Authentication methods
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/login', {
-      method: 'POST',
+    const response = await this.request<AuthResponse>("/auth/login", {
+      method: "POST",
       body: JSON.stringify(credentials),
     });
 
@@ -201,8 +248,8 @@ class ApiService {
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/register', {
-      method: 'POST',
+    const response = await this.request<AuthResponse>("/auth/register", {
+      method: "POST",
       body: JSON.stringify(userData),
     });
 
@@ -212,14 +259,19 @@ class ApiService {
   }
 
   async getProfile(): Promise<{ user: User }> {
-    return await this.request<{ user: User }>('/auth/profile');
+    return await this.request<{ user: User }>("/auth/profile");
   }
 
-  async updateProfile(profileData: UpdateProfileRequest): Promise<{ message: string; user: User }> {
-    return await this.request<{ message: string; user: User }>('/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
+  async updateProfile(
+    profileData: UpdateProfileRequest,
+  ): Promise<{ message: string; user: User }> {
+    return await this.request<{ message: string; user: User }>(
+      "/auth/profile",
+      {
+        method: "PUT",
+        body: JSON.stringify(profileData),
+      },
+    );
   }
 
   async logout(): Promise<void> {
@@ -228,15 +280,18 @@ class ApiService {
 
   // Password reset methods
   async requestPasswordReset(email: string): Promise<{ message: string }> {
-    return await this.request<{ message: string }>('/auth/forgot-password', {
-      method: 'POST',
+    return await this.request<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
       body: JSON.stringify({ email }),
     });
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    return await this.request<{ message: string }>('/auth/reset-password', {
-      method: 'POST',
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    return await this.request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
       body: JSON.stringify({ token, newPassword }),
     });
   }
@@ -258,174 +313,276 @@ class ApiService {
   }
 
   // Exercise methods
-  async getExercisesByMuscleGroup(muscleGroup: string): Promise<{ exercises: Exercise[] }> {
+  async getExercisesByMuscleGroup(
+    muscleGroup: string,
+  ): Promise<{ exercises: Exercise[] }> {
     // Capitalize first letter to match database format (e.g., 'chest' -> 'Chest')
     // Handle special cases like 'full_body' -> 'Full Body'
     let formattedMuscleGroup = muscleGroup;
-    if (muscleGroup.includes('_')) {
+    if (muscleGroup.includes("_")) {
       // Convert snake_case to Title Case (e.g., 'full_body' -> 'Full Body')
       formattedMuscleGroup = muscleGroup
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+        .split("_")
+        .map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+        )
+        .join(" ");
     } else {
       // Capitalize first letter only (e.g., 'chest' -> 'Chest')
-      formattedMuscleGroup = muscleGroup.charAt(0).toUpperCase() + muscleGroup.slice(1).toLowerCase();
+      formattedMuscleGroup =
+        muscleGroup.charAt(0).toUpperCase() +
+        muscleGroup.slice(1).toLowerCase();
     }
-    return await this.request<{ exercises: Exercise[] }>(`/exercises?muscle_group=${encodeURIComponent(formattedMuscleGroup)}`);
+    return await this.request<{ exercises: Exercise[] }>(
+      `/exercises?muscle_group=${encodeURIComponent(formattedMuscleGroup)}`,
+    );
   }
 
   async getAllExercises(): Promise<{ exercises: Exercise[] }> {
-    return await this.request<{ exercises: Exercise[] }>('/exercises');
+    return await this.request<{ exercises: Exercise[] }>("/exercises");
   }
 
   // Workout methods
-  async createWorkout(workoutData: CreateWorkoutRequest): Promise<{ message: string; workout: Workout }> {
-    return await this.request<{ message: string; workout: Workout }>('/workouts', {
-      method: 'POST',
-      body: JSON.stringify(workoutData),
-    });
+  async createWorkout(
+    workoutData: CreateWorkoutRequest,
+  ): Promise<{ message: string; workout: Workout }> {
+    return await this.request<{ message: string; workout: Workout }>(
+      "/workouts",
+      {
+        method: "POST",
+        body: JSON.stringify(workoutData),
+      },
+    );
   }
 
   async getUserWorkouts(): Promise<{ workouts: Workout[] }> {
-    return await this.request<{ workouts: Workout[] }>('/workouts');
+    return await this.request<{ workouts: Workout[] }>("/workouts");
   }
 
   async getFollowers(): Promise<{ followers: any[] }> {
-    return await this.request<{ followers: any[] }>('/auth/followers');
+    return await this.request<{ followers: any[] }>("/auth/followers");
   }
 
   async getFollowing(): Promise<{ following: any[] }> {
-    return await this.request<{ following: any[] }>('/auth/following');
+    return await this.request<{ following: any[] }>("/auth/following");
   }
 
   async getWorkout(workoutId: number): Promise<{ workout: Workout }> {
     return await this.request<{ workout: Workout }>(`/workouts/${workoutId}`);
   }
 
-  async updateWorkout(workoutId: number, workoutData: Partial<CreateWorkoutRequest>): Promise<{ message: string; workout: Workout }> {
-    return await this.request<{ message: string; workout: Workout }>(`/workouts/${workoutId}`, {
-      method: 'PUT',
-      body: JSON.stringify(workoutData),
-    });
+  async updateWorkout(
+    workoutId: number,
+    workoutData: Partial<CreateWorkoutRequest>,
+  ): Promise<{ message: string; workout: Workout }> {
+    return await this.request<{ message: string; workout: Workout }>(
+      `/workouts/${workoutId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(workoutData),
+      },
+    );
   }
 
   async deleteWorkout(workoutId: number): Promise<{ message: string }> {
     return await this.request<{ message: string }>(`/workouts/${workoutId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   // Workout Exercise methods
-  async addExerciseToWorkout(workoutId: number, exerciseData: AddExerciseToWorkoutRequest): Promise<{ message: string; workout_exercise: WorkoutExercise }> {
-    return await this.request<{ message: string; workout_exercise: WorkoutExercise }>(`/workouts/${workoutId}/exercises`, {
-      method: 'POST',
+  async addExerciseToWorkout(
+    workoutId: number,
+    exerciseData: AddExerciseToWorkoutRequest,
+  ): Promise<{ message: string; workout_exercise: WorkoutExercise }> {
+    return await this.request<{
+      message: string;
+      workout_exercise: WorkoutExercise;
+    }>(`/workouts/${workoutId}/exercises`, {
+      method: "POST",
       body: JSON.stringify(exerciseData),
     });
   }
 
-  async removeExerciseFromWorkout(workoutId: number, exerciseId: number): Promise<{ message: string }> {
-    return await this.request<{ message: string }>(`/workouts/${workoutId}/exercises/${exerciseId}`, {
-      method: 'DELETE',
-    });
+  async removeExerciseFromWorkout(
+    workoutId: number,
+    exerciseId: number,
+  ): Promise<{ message: string }> {
+    return await this.request<{ message: string }>(
+      `/workouts/${workoutId}/exercises/${exerciseId}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 
   // Set methods
-  async addSetsToExercise(workoutExerciseId: number, setData: AddSetsToExerciseRequest): Promise<{ message: string; set: Set }> {
-    return await this.request<{ message: string; set: Set }>(`/workouts/exercises/${workoutExerciseId}/sets`, {
-      method: 'POST',
-      body: JSON.stringify(setData),
-    });
+  async addSetsToExercise(
+    workoutExerciseId: number,
+    setData: AddSetsToExerciseRequest,
+  ): Promise<{ message: string; set: Set }> {
+    return await this.request<{ message: string; set: Set }>(
+      `/workouts/exercises/${workoutExerciseId}/sets`,
+      {
+        method: "POST",
+        body: JSON.stringify(setData),
+      },
+    );
   }
 
-  async updateSet(setId: number, setData: { reps?: number; weight?: number; rest_time?: number; notes?: string }): Promise<{ message: string; set: Set }> {
-    return await this.request<{ message: string; set: Set }>(`/workouts/sets/${setId}`, {
-      method: 'PUT',
-      body: JSON.stringify(setData),
-    });
+  async updateSet(
+    setId: number,
+    setData: {
+      reps?: number;
+      weight?: number;
+      rest_time?: number;
+      notes?: string;
+    },
+  ): Promise<{ message: string; set: Set }> {
+    return await this.request<{ message: string; set: Set }>(
+      `/workouts/sets/${setId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(setData),
+      },
+    );
   }
 
   async deleteSet(setId: number): Promise<{ message: string }> {
     return await this.request<{ message: string }>(`/workouts/sets/${setId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
-  async getExerciseProgress(exerciseId: number): Promise<{ exercise: ExerciseDetails; progress: ExerciseProgressPoint[] }> {
-    return await this.request<{ exercise: ExerciseDetails; progress: ExerciseProgressPoint[] }>(
-      `/workouts/exercise-progress/${exerciseId}`
+  async getExerciseProgress(
+    exerciseId: number,
+  ): Promise<{ exercise: ExerciseDetails; progress: ExerciseProgressPoint[] }> {
+    return await this.request<{
+      exercise: ExerciseDetails;
+      progress: ExerciseProgressPoint[];
+    }>(`/workouts/exercise-progress/${exerciseId}`);
+  }
+
+  // Outdoor workout integrations
+  async getOutdoorWeather(
+    latitude: number,
+    longitude: number,
+  ): Promise<OutdoorWeather> {
+    return await this.request<OutdoorWeather>(
+      `/outdoor/weather?lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`,
+    );
+  }
+
+  async getOutdoorPlaces(
+    latitude: number,
+    longitude: number,
+    radius = 3000,
+  ): Promise<{ source: string; location: any; places: OutdoorPlace[] }> {
+    return await this.request<{
+      source: string;
+      location: any;
+      places: OutdoorPlace[];
+    }>(
+      `/outdoor/places?lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}&radius=${encodeURIComponent(radius)}`,
     );
   }
 
   // Social methods
   async getFeed(): Promise<{ feed: any[] }> {
-    return await this.request<{ feed: any[] }>('/social/feed');
+    return await this.request<{ feed: any[] }>("/social/feed");
   }
 
   async getDiscoverWorkouts(): Promise<{ workouts: any[] }> {
-    return await this.request<{ workouts: any[] }>('/social/discover');
+    return await this.request<{ workouts: any[] }>("/social/discover");
   }
 
   async likeWorkout(workoutId: number): Promise<{ message: string }> {
-    return await this.request<{ message: string }>(`/social/like/${workoutId}`, {
-      method: 'POST',
-    });
+    return await this.request<{ message: string }>(
+      `/social/like/${workoutId}`,
+      {
+        method: "POST",
+      },
+    );
   }
 
   async unlikeWorkout(workoutId: number): Promise<{ message: string }> {
-    return await this.request<{ message: string }>(`/social/like/${workoutId}`, {
-      method: 'DELETE',
-    });
+    return await this.request<{ message: string }>(
+      `/social/like/${workoutId}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 
-  async addComment(workoutId: number, content: string): Promise<{ message: string; comment: any }> {
-    return await this.request<{ message: string; comment: any }>(`/social/comment/${workoutId}`, {
-      method: 'POST',
-      body: JSON.stringify({ content }),
-    });
+  async addComment(
+    workoutId: number,
+    content: string,
+  ): Promise<{ message: string; comment: any }> {
+    return await this.request<{ message: string; comment: any }>(
+      `/social/comment/${workoutId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      },
+    );
   }
 
   async getComments(workoutId: number): Promise<{ comments: any[] }> {
-    return await this.request<{ comments: any[] }>(`/social/comments/${workoutId}`);
+    return await this.request<{ comments: any[] }>(
+      `/social/comments/${workoutId}`,
+    );
   }
 
   async deleteComment(commentId: number): Promise<{ message: string }> {
-    return await this.request<{ message: string }>(`/social/comment/${commentId}`, {
-      method: 'DELETE',
-    });
+    return await this.request<{ message: string }>(
+      `/social/comment/${commentId}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 
   // User search and follow methods
   async searchUsers(query: string): Promise<{ users: any[] }> {
-    return await this.request<{ users: any[] }>(`/auth/search?q=${encodeURIComponent(query)}`);
+    return await this.request<{ users: any[] }>(
+      `/auth/search?q=${encodeURIComponent(query)}`,
+    );
   }
 
   async getRecommendedUsers(): Promise<{ users: any[]; count: number }> {
-    return await this.request<{ users: any[]; count: number }>('/auth/recommended');
+    return await this.request<{ users: any[]; count: number }>(
+      "/auth/recommended",
+    );
   }
 
   async getUserProfile(userId: number): Promise<{ user: any }> {
     return await this.request<{ user: any }>(`/auth/user/${userId}`);
   }
 
-  async getUserWorkoutsByUserId(userId: number): Promise<{ workouts: Workout[] }> {
-    return await this.request<{ workouts: Workout[] }>(`/workouts/user/${userId}`);
+  async getUserWorkoutsByUserId(
+    userId: number,
+  ): Promise<{ workouts: Workout[] }> {
+    return await this.request<{ workouts: Workout[] }>(
+      `/workouts/user/${userId}`,
+    );
   }
 
   async followUser(userId: number): Promise<{ message: string }> {
     return await this.request<{ message: string }>(`/social/follow/${userId}`, {
-      method: 'POST',
+      method: "POST",
     });
   }
 
   async unfollowUser(userId: number): Promise<{ message: string }> {
     return await this.request<{ message: string }>(`/social/follow/${userId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   async getFollowStatus(userId: number): Promise<{ is_following: boolean }> {
-    return await this.request<{ is_following: boolean }>(`/social/follow-status/${userId}`);
+    return await this.request<{ is_following: boolean }>(
+      `/social/follow-status/${userId}`,
+    );
   }
 }
 
